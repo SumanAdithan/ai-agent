@@ -1,0 +1,39 @@
+---
+title: 14. Models & Providers
+description: Overview of LLMs and API providers
+---
+
+import { Cards, Card } from 'fumadocs-ui/components/card';
+import { Globe, Zap, Cpu } from 'lucide-react';
+
+# Models & API Providers
+
+To give our agent a "brain", we need to connect it to Large Language Models (LLMs). Here is a breakdown of the three primary providers we will support, including their cost and usability.
+
+<Cards>
+
+  <Card title="OpenAI (GPT-4o)" icon={<Globe className="text-emerald-500"/>}>
+    The industry standard. Offers incredibly powerful and reliable reasoning capabilities. Best for complex, multi-step agent logic.
+
+    **Cost:** Premium (Highest cost per token)  
+    **Usability:** Excellent (Strict JSON adherence)  
+    [Get API Key](https://platform.openai.com/api-keys)
+  </Card>
+
+  <Card title="Google Gemini (1.5 Pro)" icon={<Zap className="text-blue-500"/>}>
+    Google's flagship multimodal model. Offers a massive context window (up to 2M tokens) and fast processing for huge documents.
+
+    **Cost:** Low / Free Tier (Generous free tier via AI Studio)  
+    **Usability:** Great (Incredible for RAG and long-context)  
+    [Get API Key](https://aistudio.google.com/app/apikey)
+  </Card>
+
+  <Card title="Groq (Llama 3)" icon={<Cpu className="text-orange-500"/>}>
+    Runs open-source models (like Llama 3) on custom silicon hardware (LPUs). Delivers mind-blowingly fast token generation.
+
+    **Cost:** Extremely Low (Accessible free tier)  
+    **Usability:** Good (Best for real-time generation)  
+    [Get API Key](https://console.groq.com/keys)
+  </Card>
+
+</Cards>

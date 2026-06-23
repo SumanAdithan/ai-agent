@@ -1,0 +1,38 @@
+---
+title: 7. What is an AI Agent
+description: LLM + memory + tools + rules
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { StandardAgentFlow } from '@/components/diagrams/Topic7Diagram';
+
+# What is an AI Agent?
+
+An Agent is an LLM-powered program that is given autonomy to **decide what to do next**. 
+
+Instead of just returning text, an agent can look at the current context, determine if it needs more information, and execute tools to gather that information before finally answering the user.
+
+<Callout type="info">
+  **The Formula:** `Agent = LLM + Memory + Tools + Rules`
+</Callout>
+
+### Core Capabilities
+*   **Autonomy:** It can decide the "next step" without human intervention.
+*   **Tool Usage:** It can run code, query databases, or search the web.
+*   **Control:** Despite its autonomy, the agent's decisions are strictly based on the **rules and goals** you define in the orchestration layer.
+
+---
+
+## Agent Flow Diagram
+
+Here is exactly how an agent orchestrates a request:
+
+<StandardAgentFlow />
+
+## Real-world Example: Support Agent
+
+1.  **Incoming:** A customer sends a support message.
+2.  **Tool Call:** The agent searches the company Knowledge Base (KB).
+3.  **Draft:** The agent drafts a reply including citations and links.
+4.  **HITL:** The agent waits for Human-in-the-Loop (HITL) approval.
+5.  **Outgoing:** Once approved, the message is sent to the customer.

@@ -1,0 +1,37 @@
+---
+title: 6. Modern AI Apps
+description: UI -> Orchestration -> Models & Tools
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { ArchitectureDiagram } from '@/components/diagrams/Topic6Diagram';
+
+# Modern AI Applications
+
+To build reliable AI applications, you must think beyond the basic "ChatGPT Wrapper". A modern AI architecture consists of **three distinct layers**.
+
+<ArchitectureDiagram />
+
+## 1. User Interface (UI)
+The surface layer where humans interact with your system. This can be:
+- A chat interface
+- A Command Line Interface (CLI)
+- A dashboard or traditional web application
+
+## 2. Orchestration Layer
+This is the **brain and wiring** of your AI application. It is completely hidden from the user, but it holds all the business logic.
+
+The orchestration layer is responsible for:
+- Deciding which model to call (e.g., GPT-4 vs Gemini Pro).
+- Deciding which tools or APIs to use based on the user's intent.
+- Determining if a database lookup (RAG) or a web search is needed.
+- Combining multiple steps into a proper flow.
+
+## 3. Models & Tools
+The foundational execution layer.
+- **Models:** OpenAI, Gemini, Groq, or local open-source models.
+- **Tools:** Web search engines, database queries, internal company APIs, vector databases, or simple calculators.
+
+<Callout type="info">
+  **Remember:** The Orchestration layer is where the real engineering happens. It connects the UI to the Models & Tools.
+</Callout>

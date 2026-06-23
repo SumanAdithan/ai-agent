@@ -1,0 +1,28 @@
+---
+title: 9. LangChain in Stack
+description: The toolkit for LLM Workflows
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Where LangChain Fits in this Stack
+
+**LangChain** is a massive toolkit designed for building LLM workflows. Its primary purpose is to provide consistent, abstracted wrappers over different models and tools so that developers can write code once and seamlessly swap out underlying providers.
+
+## Key Features
+*   **Model Wrappers:** Switch between OpenAI, Gemini, and Groq with zero structural code changes.
+*   **Tool Integrations:** Built-in wrappers for vector databases, web scrapers, and APIs.
+*   **LCEL:** LangChain Expression Language for building declarative pipelines (Chains).
+*   **RAG:** Robust components for Retrieval-Augmented Generation.
+
+## Architecture Placement
+
+LangChain sits perfectly inside the **Orchestration** layer of a modern AI application.
+
+import { LangChainStackDiagram } from '@/components/diagrams/Topic9Diagram';
+
+<LangChainStackDiagram />
+
+<Callout type="info">
+  Think of LangChain as the standard library or "glue" that connects your core application logic to the external AI ecosystem.
+</Callout>

@@ -1,0 +1,33 @@
+---
+title: 10. LangGraph in Stack
+description: Graphs for Agent Workflows
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Where LangGraph Fits in this Stack
+
+While LangChain is excellent for building individual steps and chains, it struggles with highly complex, cyclic, or long-running autonomous agents. This is where **LangGraph** comes in.
+
+LangGraph is a framework for building stateful, multi-actor applications with LLMs, modeled as graphs.
+
+## Core Concepts
+*   **Nodes & Edges:** You define states as nodes and control flow as edges.
+*   **Stateful:** It maintains a global state object that is passed between nodes.
+*   **Retries & Cycles:** It natively supports looping back to previous steps (e.g., if a tool call fails, try again).
+*   **HITL (Human-in-the-Loop):** You can pause the graph's execution to wait for human approval before proceeding.
+
+## LangChain vs LangGraph
+
+<Callout type="info">
+  **LangChain** is used to build the individual *steps* (the logic that talks to the models).<br/>
+  **LangGraph** defines how those steps run over time (the *orchestration* of the multi-step flow).
+</Callout>
+
+import { LangGraphStackDiagram } from '@/components/diagrams/Topic10Diagram';
+
+## Architecture Placement
+
+LangGraph sits *above* the LangChain building blocks, acting as the ultimate control flow mechanism.
+
+<LangGraphStackDiagram />

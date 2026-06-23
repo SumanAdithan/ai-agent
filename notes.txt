@@ -1,0 +1,80 @@
+AI Agents
+
+Section 1: Introduction
+    1. leave placeholder we will update later
+    2. leave placeholder we will update later
+    3. leave placeholder we will update later
+    4. leave placeholder we will update later
+    5. leave placeholder we will update later
+
+Section 2: Foundations: LangChain, Agents & Flow
+    6. Modern AI Apps: UI -> Orchestration -> Models & Tools 
+        - Modern AI Apps = 3 Layers
+        - UI -> Orchestration -> Models & Tools
+            - ui: user interface like chat, cli, etc
+            - Orchestration: brain + wiring of your AI application, it will decide that which model
+            going to call, which tools or APIs it will use, whether we need a search or whether we need a rag
+            or we need a databases or etc. and combining the multiple steps into a particular proper flow.
+            - Models & Tools: models can be openAI or Gemini or local models. tools can be web search, it can be 
+            database queries, internal APIs, vector DB, calculators, it can be any tools.
+        - Think beyond "ChatGPT Wrapper"
+        - Orchestration = brain & wiring
+
+    7. What is an AI Agent
+        - Agent = LLM + memory + tools + rules
+            - An Agent is an LLM powered program that can use tools that can look at any context,
+            then based on the context, it can decide the next step and that decision on the next step 
+            that will be based on the rules or the goals that you are going to set
+        - Can decide "What to do next"
+        - Still under your control
+
+        diagram:
+            user request -> agent logic: check context, call tools, draft answer, maybe repeat, ask user approvals -> final response
+
+            real example (support agent):
+                msg -> KB (knowledge base) -> draft a reply with citations(sources can be web browser or llm) human approvals
+
+    8. Chains vs Agents
+        - Chains = fixed steps (no decision)
+            - fixed pipeline, all the steps are defined
+            - user input -> system prompt -> call model -> answer
+            - eg(rag): retrive docs -> prompt+docs -> call model -> answer
+        - Agent = Chooses next Step using context
+        - Use chain first, agents when needed
+
+    9. Where LangChain Fits in this Stack
+        - LangChain = toolkit for LLM Workflows, and provide consistent wrappers over different models (switch to multiple model seamlessly)
+        - prompts, models, tools, RAG, LCEL
+        - Used inside the Orchestration layer
+
+        digram:
+            UI -> Orchestration with LangChain -(communicate)> models, tools, vector dbs
+
+    10. Where LangGraph Fits in this Stack
+        - LangGraph = graphs for agent Workflows
+        - Nodes, edges, state, retries, HITL
+        - Sits above LangChain building blocks
+
+        LangChain -> build steps
+        LangGraph -> how those steps run over time
+
+        - LangChain is the tool or concept which will talk to the models
+        - LangGraph is going to Orchestrate multi-step agent like flows
+
+        diagram:
+            UI -> LangGraph (define the graph, state, control flow) -> Call LangChain -> models, Db, Apis
+
+    11. JSON-first Mindset
+        - Treat LLM Output as data, not paragraph
+        - JSON = predictable, testable, integratable
+        - We enforce shapes with zod
+
+Section 3: Orientation & Hello agent
+    12. What are we building
+    13. Setting up project and install dependencies: Starter Code
+    14. OpenAi, Gemini & Groq models - API Keys, overview
+    15. Env setup
+    16. Google gemini provider implementation
+    17. Groq provider implementation
+    18. OpenAi provider implementation
+    19. Hello agent and output

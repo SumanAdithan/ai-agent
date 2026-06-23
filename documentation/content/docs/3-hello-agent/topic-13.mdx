@@ -1,0 +1,70 @@
+---
+title: 13. Project Setup
+description: Setting up the starter code and dependencies
+---
+
+import { Files, Folder, File } from 'fumadocs-ui/components/files';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+# Project Setup & Dependencies
+
+Before we build our first agent, we need to initialize a fresh Node.js environment configured with TypeScript, LangChain packages, and environment variable support.
+
+<Steps>
+
+<Step>
+### Initialize Project
+Initialize your project using `pnpm init` and ensure you set `"type": "module"` in your `package.json` to use modern ES imports natively.
+</Step>
+
+<Step>
+### Install Dependencies
+Install the necessary LangChain core, provider packages, and typescript tooling.
+
+```bash
+pnpm add dotenv @langchain/core @langchain/google-genai @langchain/groq @langchain/openai
+pnpm add -D typescript @types/node tsx
+```
+</Step>
+
+<Step>
+### Project Structure
+We keep the architecture simple. An `src` folder for logic, and root configs for typescript and environment variables.
+
+<Files>
+  <Folder name="hello-agent" defaultOpen>
+    <Folder name="src" defaultOpen>
+      <File name="env.ts" />
+      <File name="index.ts" />
+    </Folder>
+    <File name=".env" />
+    <File name=".gitignore" />
+    <File name="package.json" />
+    <File name="tsconfig.json" />
+  </Folder>
+</Files>
+</Step>
+
+<Step>
+### TypeScript Configuration
+We configure TypeScript strictly for Modern ECMAScript (ES2022/ESNext) and use node module resolution to perfectly complement the LangChain ecosystem.
+
+```json title="tsconfig.json"
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node"]
+  },
+  "include": ["src"]
+}
+```
+</Step>
+
+</Steps>

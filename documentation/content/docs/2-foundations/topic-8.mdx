@@ -1,0 +1,36 @@
+---
+title: 8. Chains vs Agents
+description: Fixed pipelines vs Autonomous routing
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { ChainsVsAgentsDiagram } from '@/components/diagrams/Topic8Diagram';
+
+# Chains vs Agents
+
+When building the orchestration layer of an AI application, you have two primary architectural choices: **Chains** or **Agents**.
+
+<ChainsVsAgentsDiagram />
+
+## Chains (Fixed Steps)
+
+A chain is a **fixed pipeline** where all steps are hardcoded and defined in advance. The LLM makes no decisions about the control flow.
+
+*   **Flow:** User Input ➔ System Prompt ➔ Call Model ➔ Return Answer
+*   **RAG Example:** Retrieve Docs ➔ Format Prompt + Docs ➔ Call Model ➔ Return Answer
+
+<Callout type="info">
+  **Use Cases:** Data extraction, translation, summarization, and standard RAG pipelines.
+</Callout>
+
+## Agents (Dynamic Steps)
+
+An agent is dynamic. The LLM acts as a reasoning engine that **chooses the next step** based on the context. If an agent hits an error, it can decide to try a different tool or re-phrase its query.
+
+*   **Flow:** User Input ➔ Agent ➔ *Agent decides whether to use Tool A, Tool B, or Answer directly* ➔ Return Answer
+
+## Which should you use?
+
+<Callout type="warn">
+  **Best Practice:** Always use a Chain first. Only upgrade to an Agent when you explicitly need dynamic decision-making. Chains are faster, more reliable, and cheaper.
+</Callout>
