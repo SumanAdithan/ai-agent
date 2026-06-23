@@ -11,7 +11,7 @@ const config = {
   },
   // If you decide NOT to use a custom root domain and host on the default github URL
   // (e.g. https://<username>.github.io/ai-agent), you MUST uncomment the line below:
-  // basePath: '/ai-agent',
+  basePath: '/ai-agent',
 };
 
 export default withMDX(config);
