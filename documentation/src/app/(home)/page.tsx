@@ -37,7 +37,7 @@ export default function HomePage() {
             Start Learning <ArrowRight className="w-5 h-5" />
           </Link>
           <a
-            href="https://github.com"
+            href="https://github.com/SumanAdithan/ai-agent"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 px-8 py-4 bg-fd-secondary text-fd-foreground font-bold rounded-full border border-fd-border hover:border-fd-foreground/30 transition-colors duration-300"
