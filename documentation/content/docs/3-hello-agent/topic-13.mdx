@@ -19,10 +19,10 @@ Initialize your project using `pnpm init` and ensure you set `"type": "module"` 
 
 <Step>
 ### Install Dependencies
-Install the necessary LangChain core, provider packages, and typescript tooling.
+Install the necessary raw provider SDKs (OpenAI and Google GenAI) and typescript tooling.
 
 ```bash
-pnpm add dotenv @langchain/core @langchain/google-genai @langchain/groq @langchain/openai
+pnpm add dotenv @google/genai openai
 pnpm add -D typescript @types/node tsx
 ```
 </Step>
@@ -36,6 +36,7 @@ We keep the architecture simple. An `src` folder for logic, and root configs for
     <Folder name="src" defaultOpen>
       <File name="env.ts" />
       <File name="index.ts" />
+      <File name="provider.ts" />
     </Folder>
     <File name=".env" />
     <File name=".gitignore" />
@@ -47,7 +48,7 @@ We keep the architecture simple. An `src` folder for logic, and root configs for
 
 <Step>
 ### TypeScript Configuration
-We configure TypeScript strictly for Modern ECMAScript (ES2022/ESNext) and use node module resolution to perfectly complement the LangChain ecosystem.
+We configure TypeScript strictly for Modern ECMAScript (ES2022/ESNext) and use node module resolution.
 
 ```json title="tsconfig.json"
 {

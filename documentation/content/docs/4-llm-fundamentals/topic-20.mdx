@@ -1,0 +1,61 @@
+---
+title: 20. Tokens, Cost & Context
+description: Understanding how LLMs read and process data
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+# Tokens & Context Window
+
+Before we build complex systems that feed large amounts of data into LLMs, we must understand the fundamental units of how models perceive text: **Tokens** and the **Context Window**.
+
+### What are Tokens?
+
+LLMs do not read words character-by-character or word-by-word like humans do. Instead, they break down text into **Tokens**.
+
+A token is essentially a "chunk of a word". 
+* A short, common word (like "apple") is usually 1 token.
+* A long, complex word (like "unbelievable") might be broken into 2 or 3 tokens.
+* On average in English, **1 token ≈ 0.75 words** (or 100 tokens ≈ 75 words).
+
+### The Context Window
+
+The **Context Window** is the absolute maximum amount of information (measured in tokens) that the LLM can "see" and process at any given moment.
+
+It is like the model's short-term working memory. When you send a request to an LLM, the context window must fit:
+1. **System Instructions:** The core rules governing the agent.
+2. **User Input:** The current prompt or question.
+3. **Chat History:** Previous messages in the conversation.
+4. **Tool Responses:** Data returned by web searches, database queries, etc.
+5. **Its Own Output:** The response the LLM is actively generating!
+
+<Callout type="warn" title="What happens if you exceed the limit?">
+If the total number of tokens exceeds the context window, the model will fail, or older parts of the conversation will be forcefully truncated (dropped). The model will "forget" things that were said earlier!
+</Callout>
+
+### Rules for Managing Context
+
+Because context is limited and directly tied to latency and cost, you must follow these golden rules when building Agents:
+
+<Steps>
+
+<Step>
+### 1. Keep Prompts Lean
+Your system instructions and prompts should be as short and concise as possible. Avoid long, random dumping of unnecessary information.
+</Step>
+
+<Step>
+### 2. Control Injected Context
+When giving your agent access to tools (like reading a file), ensure you strictly limit the amount of text it returns. Never dump a 10,000-line log file directly into the context window.
+</Step>
+
+<Step>
+### 3. Monitor Costs & Latency
+* **More Input Tokens:** Means more text for the LLM to read, increasing Time-To-First-Token (latency).
+* **More Output Tokens:** Means more text for the LLM to generate, which is significantly slower and more expensive.
+</Step>
+
+</Steps>
+
+Remember: **Short and concise > long and messy.** Treating the context window as a precious resource is the key to building fast, cost-effective, and smart AI agents!

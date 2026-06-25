@@ -1,0 +1,106 @@
+---
+title: 16. The Provider Logic
+description: Building a dynamic LLM routing system using raw SDKs
+---
+
+# The Provider Logic
+
+Now that we have our environment variables ready, it is time to build our `src/provider.ts` file. 
+
+This file acts as our abstraction layer. Instead of scattering API calls throughout our application, we centralize our interactions with Gemini, OpenAI, and Groq in one place. We define a standard output structure (`HelloOutput`) so our application never needs to know *which* AI is responding, as long as it adheres to the format!
+
+### 1. Standardizing the Output
+
+First, we define a standard TypeScript type so that regardless of which provider is called, the output is formatted identically.
+
+```typescript
+type Provider = "openai" | "gemini" | "groq";
+
+type HelloOutput = {
+  ok: true;
+  provider: Provider;
+  model: string;
+  message: string;
+};
+```
+
+### 2. Provider Functions
+
+Next, we create separate asynchronous functions for each provider. Notice how Groq is clever: because Groq adopted the OpenAI API specification, we actually use the `openai` SDK to call Groq models by simply overriding the `baseURL`!
+
+```typescript
+import { GoogleGenAI } from "@google/genai";
+import OpenAI from "openai";
+
+async function helloGemini(): Promise<HelloOutput> {
+  const apiKey = process.env.GOOGLE_API_KEY;
+  if (!apiKey) throw new Error("Google api key is not present!");
+
+  const ai = new GoogleGenAI({ apiKey });
+  const model = "gemini-2.5-flash-lite";
+
+  const response = await ai.models.generateContent({
+    model,
+    contents: "Say a short hello",
+  });
+
+  return { ok: true, provider: "gemini", model, message: response.text ?? "" };
+}
+
+async function helloOpenAI(): Promise<HelloOutput> {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OpenAI api key is not present!");
+
+  const client = new OpenAI({ apiKey });
+  const model = "gpt-5-mini";
+
+  const response = await client.responses.create({
+    model,
+    input: "Say a short hello",
+  });
+
+  return { ok: true, provider: "openai", model, message: response.output_text };
+}
+
+async function helloGroq(): Promise<HelloOutput> {
+  const apiKey = process.env.GROQ_API_KEY;
+  if (!apiKey) throw new Error("Groq api key is not present!");
+
+  const client = new OpenAI({
+    apiKey,
+    baseURL: "https://api.groq.com/openai/v1", // Route to Groq's superfast LPUs!
+  });
+  const model = "llama-3.3-70b-versatile";
+
+  const response = await client.responses.create({
+    model,
+    input: "Say a short hello",
+  });
+
+  return { ok: true, provider: "groq", model, message: response.output_text };
+}
+```
+
+### 3. The Router Function
+
+Finally, we export a single `selectAndHello()` function. This function checks if a `PROVIDER` environment variable forces a specific model. If not, it gracefully falls back by checking which API keys are available!
+
+```typescript
+export async function selectAndHello(): Promise<HelloOutput> {
+  const forced = (process.env.PROVIDER || "").toLocaleLowerCase();
+
+  if (forced === "gemini") return helloGemini();
+  if (forced === "groq") return helloGroq();
+  if (forced === "openai") return helloOpenAI();
+
+  if (forced)
+    throw new Error(`Unsupported PROVIDER=${forced}. use openai | groq | gemini`);
+
+  // Fallbacks based on available keys
+  if (process.env.GOOGLE_API_KEY) { try { return await helloGemini(); } catch {} }
+  if (process.env.OPENAI_API_KEY) { try { return await helloOpenAI(); } catch {} }
+  if (process.env.GROQ_API_KEY) { try { return await helloGroq(); } catch {} }
+
+  throw new Error("No provider configured");
+}
+```

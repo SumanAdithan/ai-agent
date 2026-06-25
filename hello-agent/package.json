@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "tsx watch src/index.ts"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +24,8 @@
     "typescript": "^6.0.3"
   },
   "dependencies": {
-    "dotenv": "^17.4.2"
+    "@google/genai": "^2.9.0",
+    "dotenv": "^17.4.2",
+    "openai": "^6.44.0"
   }
 }

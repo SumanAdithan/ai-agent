@@ -1,0 +1,62 @@
+---
+title: 17. The Entry Point
+description: Executing our Hello Agent
+---
+
+# The Entry Point
+
+We are finally ready to piece everything together in our main execution file: `src/index.ts`.
+
+This is the primary entry point for our Node.js application. Its job is very simple: it loads the environment variables safely, asks the provider layer to execute the LLM call, and then logs the result to the console.
+
+### The Execution Block
+
+Here is the complete code for `src/index.ts`:
+
+```typescript title="src/index.ts"
+import { loadEnv } from "./env";
+import { selectAndHello } from "./provider";
+
+async function main() {
+  // 1. Ensure environment variables are loaded FIRST
+  loadEnv();
+
+  try {
+    // 2. Delegate the generation to the provider routing layer
+    const result = await selectAndHello();
+
+    // 3. Output the beautifully formatted JSON result
+    process.stdout.write(JSON.stringify(result, null, 2) + "\n");
+  } catch (err) {
+    // 4. Handle errors gracefully
+    const message = err instanceof Error ? err.message : String(err);
+    console.log(message);
+    process.exit(1);
+  }
+}
+
+main();
+```
+
+### Running the Application
+
+You can execute the application using our handy `dev` script, which uses `tsx` to run TypeScript files directly in Node without needing a compile step:
+
+```bash
+pnpm dev
+```
+
+If everything is configured correctly, you should see an output that looks exactly like this:
+
+```json
+{
+  "ok": true,
+  "provider": "gemini",
+  "model": "gemini-2.5-flash-lite",
+  "message": "Hello! How can I help you today?"
+}
+```
+
+**Congratulations!** You have successfully built a foundational application that securely interfaces with modern Large Language Models. 
+
+In the next modules, we will use this foundation to build true *Agents* equipped with Memory, Tools, and Reasoning capabilities!

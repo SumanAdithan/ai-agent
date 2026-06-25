@@ -78,3 +78,20 @@ Section 3: Orientation & Hello agent
     17. Groq provider implementation
     18. OpenAi provider implementation
     19. Hello agent and output
+
+Section 4: LLM Fundamentals: JSON-First Approach
+    20. Tokens, const and context window
+        - Tokens = chunk of words
+        - Context Window = how mush model can see 
+            - system instructions, user input, chat history, tools responses, its own output
+            - beyond the limit possibly the older part get truncated or dropped
+            - rules:
+                - prompt should be very lean
+                - have a control in amount of context should be sent
+
+                - more tokens = more to read for llm
+                - more tokens out = more to generate 
+                - cost and latency increases
+
+                - short and concise > long, random dumping
+        - Too Long -> truncation, higher cost
