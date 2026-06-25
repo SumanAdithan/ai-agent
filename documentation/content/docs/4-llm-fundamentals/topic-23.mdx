@@ -1,0 +1,49 @@
+---
+title: 23. Zod Schemas
+description: Using Zod as a contract for typed JSON outputs
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Zod Schemas as Contracts
+
+When you ask an LLM to return JSON, you must **"Trust, but verify"**. 
+
+Even the smartest models can occasionally hallucinate a property name, return a string instead of a number, or forget a required field. To solve this, we use **Zod** to define expected shapes.
+
+### Why Zod?
+
+Zod allows you to define a schema once, and it acts as both **Runtime Validation** (checking the actual data returned by the LLM) and **TypeScript Types** (giving you autocomplete in your editor).
+
+1. **Describes data shape:** Clearly defines what properties are expected.
+2. **Guarantees structure:** Ensures the LLM returns exactly `{ summary, confidence }` in the right format before your application proceeds.
+3. **Auto-parsing:** When combined with methods like `.withStructuredOutput(...)`, it actively guides the model's generation and automatically parses/validates the result.
+
+<Callout type="info" title="The Key Benefit">
+Zod ensures your JSON is always valid. It acts as an unbreakable contract between the unpredictable AI model and your rigid application logic.
+</Callout>
+
+### Installation & Authoring
+
+To get started, install Zod in your project:
+
+```bash
+pnpm add zod
+```
+
+Then, you can define a schema to represent the data structure you want the LLM to output:
+
+```typescript title="src/schema.ts"
+import { z } from "zod"
+
+// 1. Define the Runtime Schema
+export const JsonResponseSchema = z.object({
+  summary: z.string().describe("A short, plain-English answer"), 
+  confidence: z.number().min(0).max(1).describe("Confidence score from 0.0 to 1.0")
+})
+
+// 2. Automatically infer the TypeScript type!
+export type JsonResponse = z.infer<typeof JsonResponseSchema>
+```
+
+By adding `.describe()` to your Zod fields, you are actually passing instructions directly to the LLM about what data belongs in that specific JSON field!

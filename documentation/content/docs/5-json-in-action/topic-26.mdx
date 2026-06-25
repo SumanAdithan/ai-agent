@@ -1,0 +1,80 @@
+---
+title: 26. Project Setup
+description: Setting up the Next.js Client and Express Backend
+---
+
+import { Files, Folder, File } from 'fumadocs-ui/components/files';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+# Setting up the Project
+
+For our structured JSON output project, we are adopting a full-stack architecture separated into two distinct parts: an **Express.js Node backend** and a **Next.js frontend client**.
+
+This separation of concerns allows us to keep our heavy LLM logic securely on the backend while providing a snappy, highly-interactive user interface on the frontend.
+
+<Steps>
+
+<Step>
+### 1. The Express Backend
+First, we set up a minimal Node.js environment powered by Express and TypeScript to handle our secure LLM routing logic.
+
+Create a `backend` folder and initialize the project:
+```bash
+mkdir backend && cd backend
+pnpm init
+```
+
+Install the required HTTP server and environment dependencies:
+```bash
+pnpm add express cors dotenv
+pnpm add -D typescript @types/node tsx
+```
+</Step>
+
+<Step>
+### 2. The Next.js Client
+Next, we scaffold a modern React application for our frontend using Next.js (App Router).
+
+In your main project folder, run the Next.js creation script:
+```bash
+pnpm create next-app@latest client
+```
+
+*(During setup, ensure you select TypeScript, Tailwind CSS, and the App Router.)*
+
+Finally, we initialize Shadcn UI to give us access to beautifully designed, accessible components:
+```bash
+cd client
+pnpm dlx shadcn@latest init
+```
+</Step>
+
+<Step>
+### 3. Project Structure
+Once both the backend and client are initialized, your project structure should look like this:
+
+<Files>
+  <Folder name="json_structured_output" defaultOpen>
+    <Folder name="backend">
+      <Folder name="src">
+        <File name="env.ts" />
+      </Folder>
+      <File name="package.json" />
+      <File name="tsconfig.json" />
+    </Folder>
+    <Folder name="client">
+      <Folder name="src">
+        <Folder name="app" />
+        <Folder name="components" />
+        <Folder name="lib" />
+      </Folder>
+      <File name="package.json" />
+      <File name="components.json" />
+    </Folder>
+  </Folder>
+</Files>
+</Step>
+
+</Steps>
+
+Now that our boilerplate is ready, we can begin implementing the core structured output logic in the backend!

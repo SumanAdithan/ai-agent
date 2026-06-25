@@ -1,0 +1,47 @@
+---
+title: 21. Sampling Knobs
+description: Understanding Temperature, Top P, and Max Tokens
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Sampling Knobs
+
+When you request a generation from an LLM, you have access to three primary "knobs" that control how the model samples and generates its output. Mastering these parameters is essential for building reliable agents.
+
+### The Big Three
+
+#### 1. Temperature (Stability vs. Creativity)
+Temperature controls the randomness of the model's output on a scale from 0 to 1 (sometimes higher).
+* **0 - 0.3 (Stable):** Highly deterministic. The model will almost always choose the most likely next word. **This is the best setting for generating strict JSON and using tools.**
+* **0.7+ (Creative):** The model takes more risks, resulting in varied and creative outputs. Great for brainstorming or storytelling, but terrible for structured data.
+
+#### 2. Top P (How Wide to Sample)
+Top P (or nucleus sampling) controls how much of the probability mass to consider. 
+* **1.0 (Default):** Consider all likely words.
+* **0.9 (Focused):** Ignore the "long tail" of unlikely words, ensuring more reliable output (better for JSON).
+* **Beginner Rule:** Tune either Temperature *or* Top P, but usually not both at the same time.
+
+#### 3. Max Tokens (Cap Response Length)
+This sets a hard limit on the size of the generated reply.
+* Used to protect yourself from runaway costs.
+* Used to force the model to keep its responses concise.
+* **Start at 256** for simple structured outputs like `{ "summary": "...", "confidence": 0.9 }`.
+
+<Callout type="error" title="Malformatted JSON?">
+A high `temperature` or a tiny `max_tokens` limit are the two most common causes of malformatted or truncated JSON outputs! If your JSON is cutting off midway through, increase `max_tokens`. If it is returning invalid characters, lower `temperature`.
+</Callout>
+
+---
+
+### Provider Naming Conventions
+
+While the underlying concepts remain exactly the same across all major models, different providers use slightly different parameter names in their SDKs. 
+
+*(Don't worry, modern orchestration libraries abstract these differences away so you can think in the same three knobs everywhere!)*
+
+| Parameter | OpenAI | Google Gemini | Ollama |
+| :--- | :--- | :--- | :--- |
+| **Temperature** | `temperature` | `generationConfig.temperature` | `options.temperature` |
+| **Top P** | `top_p` | `generationConfig.topP` | `options.top_p` |
+| **Max Tokens** | `max_tokens` | `generationConfig.maxOutputTokens` | `options.num_predict` |

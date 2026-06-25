@@ -1,0 +1,43 @@
+---
+title: 22. Chat vs Tools
+description: Understanding when to use pure text vs tool-calling capabilities
+---
+
+import { Cards, Card } from 'fumadocs-ui/components/card';
+import { MessageSquare, Wrench } from 'lucide-react';
+
+# Chat Models vs. Tools
+
+Modern Large Language Models operate in two primary modalities. Understanding the distinction between generating text (Chat) and generating structured data (Tools) is crucial for picking the right approach for your task. 
+
+Choose based on the task, not the hype!
+
+<Cards>
+  <Card title="Chat Models" icon={<MessageSquare className="text-blue-500"/>}>
+    **Input:** `[system_message, user_message]`  
+    **Output:** `Plain Text`  
+
+    Best for free-form answers, explanations, and general Q/A. They follow instructions well, but can sometimes fail to return strict formats without aggressive prompting.
+  </Card>
+
+  <Card title="Tool / JSON Models" icon={<Wrench className="text-emerald-500"/>}>
+    **Input:** `[messages] + [functions: weather, search]`  
+    **Output:** `Plain Text + Function Calls (JSON)`  
+
+    Better for functions and schemas. The model is specifically fine-tuned to decide whether to call a tool, and perfectly structure the JSON arguments to match your defined schema.
+  </Card>
+</Cards>
+
+---
+
+### Which Model When?
+
+#### Choose "Chat" When:
+* **Pure Language Tasks:** You need summarization, translation, explanation, or rephrasing.
+* **Simple JSON:** You only need a very compact, simple JSON answer (e.g., `{ "summary": "...", "confidence": 0.9 }`) that doesn't require complex schema validation.
+* **Isolated Logic:** No external APIs, browsing, or file reading is required to fulfill the user's request.
+
+#### Choose "Tools" When:
+* **Outside Information:** The agent needs to fetch real-time data, search the web, or query a database.
+* **Autonomy:** You want the model to choose *which* tools to use, and in *what order* to execute them.
+* **Agentic Loops:** The task requires a "Plan → Execute Tool → Observe Result → Decide" loop.

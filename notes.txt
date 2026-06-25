@@ -95,3 +95,138 @@ Section 4: LLM Fundamentals: JSON-First Approach
 
                 - short and concise > long, random dumping
         - Too Long -> truncation, higher cost
+
+    21. Sampling Knob: Temperature, Top_p, Max_tokens
+        - temperature: stability vs creativity
+            - 0 - 1
+            - 0 - 0.3 => stable temperature, deterministic, great for tools and json
+            - more that 0.7 => more creative, good for brainstorming
+        - top_p: how wide to Sampling
+            - how much of the probability must to consider  
+            - temperature low for reliablility or tupe top_p for more or less variety
+        - max_tokens: cap response length
+            - used to protect cost
+            - used to keep responses concise
+        - penalties: reduce repetition
+
+        tempreature
+            - 0 -> safest/short answer (best for JSON)
+            - 0.3 - 0.7 -> more variety; can drift the JSON
+            - default for JSON: 0
+        top_p
+            - 1 -> consider all likely words (simple default)
+            - 0.9 -> ignore the long tail (better for JSON)
+            - beginner rule: tune either temperature or top_p, not both
+        max_tokens:
+            - Hard cap on reply size
+            - Too small -> cut-off JSON
+            - for (summary, confidence): start at 256
+
+        important: High tempreature or a tiny max_tokens are the two most common causes of malformated JSON 
+
+        Provider Naming - Same Knob, Different labels
+        while parameter names vary by provider, the underlying concepts remains consistent
+
+        parameter:
+            temperature:
+                - openAI => temperature
+                - gemini => generationConfig.temperature
+                - ollama => options.temperature
+            top_p:
+                - openAI => top_p
+                - gemini => generationConfig.topP
+                - ollama => options.top_p
+            Max Tokens:
+                - openAI => max_tokens
+                - gemini => generationConfig.maxOutputTokens
+                - ollama => options.num_predict
+        we adapt names per provider under the hood; you'll think in the same three knob everywhere
+
+    22. Chat models vs Tools
+        - Chat models: free-form answers
+            - best for conversation, explanation, general Q/A
+            - follow instruction but sometime it not going to give strict format answer back
+        - Tool/JSON models: better for functions & schemas
+            - tools decide to follow your schema
+            - call the tools and based on that create valid json or structured json properly in same defined format
+        - Choose based on task, not hype
+            - Chat vs Tools — Which Model When?
+
+            Chat Models:
+            You send messages (system + user), it replies with text.
+
+            // Chat Model
+
+            messages: [system, user]
+            response: text
+
+                Choose Chat when:
+                    Pure language tasks (summary/explain/rephrase)
+                    Compact JSON answer ({ summary, confidence })
+                    No external APIs/browsing/files needed
+
+            Tools Models
+
+            Model can decide to call a function you define with a name + JSON schema.
+
+            // Tools Model
+
+            functions: [weather, websearch, db]
+
+            response: text + function calls
+           
+            Choose Tools when:
+                Outside information needed (search, fetch URL)
+                Model chooses tools and order of execution
+                Plan → tool → observe → decide loop is acceptable
+
+    23. Zod schemas as contracts for outputs
+        - zod = define expected shapes
+        - Same Schema -> runtime + Typescript
+        - Trust, but verify model output
+
+        Zod Schema — Contract for Typed JSON
+        Why Zod?
+            - Describes the shape of data at runtime
+            - Guarantees CLI returns { summary, confidence } in the right shape
+            - With withStructuredOutput(...) guides model + auto-parses/validates
+        Key Benefits
+        // Zod ensures your JSON is always valid
+        {
+        summary: string,
+        confidence: number
+        }
+
+        Installation + Authoring
+        Install
+        pnpm add zod
+        Create the schema
+        // packages/shared/src/schema.ts
+
+        import { z } from "zod"
+
+        export const JsonResponseSchema = z.object({
+        summary: z.string(), // A short, plain-English answer
+
+        confidence: z.number() // 0.0 to 1.0
+        })
+
+        export type JsonResponse = z.infer<typeof JsonResponseSchema>
+
+        This Zod schema is the contract between the model and our app.
+
+    24. Structured Output
+        - Ask model to fill schema, not guess format
+        - provider features help: JSON mode, tool caling
+        - More reliable that "pls respond in JSON"
+
+        - if not structured output we will receive wrong data type in the json.
+
+        schema -> structured output mode -> predictable json
+
+Section 5: JSON & Structured Output in Action 
+    25. What are we building?
+    26. Setting up project and Next Js Starter Code
+    27. Creating zod schema
+    28. implement OpenAi, Gemini and Groq models
+    29. Implementing core ask logic

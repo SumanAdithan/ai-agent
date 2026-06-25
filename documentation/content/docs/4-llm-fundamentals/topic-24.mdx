@@ -1,0 +1,37 @@
+---
+title: 24. Structured Output
+description: Forcing models to return predictable JSON data
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+# Structured Output
+
+Telling a model `"please respond in JSON"` inside your prompt is notoriously unreliable. The model might wrap the JSON in markdown code blocks, it might add conversational filler text before the JSON, or it might just invent its own property names.
+
+If you don't use strict structured outputs, you will eventually receive wrong data types (like receiving the string `"true"` instead of the boolean `true`), which will crash your application.
+
+### The Modern Approach
+
+Instead of asking the model to *guess* the format, modern provider APIs (OpenAI, Gemini, Groq) provide dedicated **Structured Output** features (often called JSON Mode or Tool Calling).
+
+These features allow you to pass a rigid Schema directly to the API on a system level.
+
+<Steps>
+<Step>
+#### 1. Define the Schema
+You define the exact shape of the data you want using Zod (or raw JSON Schema).
+</Step>
+<Step>
+#### 2. Enable Structured Output Mode
+You pass this schema to the provider's API alongside your prompt, explicitly enabling structured generation.
+</Step>
+<Step>
+#### 3. Receive Predictable JSON
+The model's generation is actively constrained at the token level, guaranteeing that it fills out the schema perfectly and returns 100% predictable, parseable JSON data every single time.
+</Step>
+</Steps>
+
+**Schema → Structured Output Mode → Predictable JSON.** 
+
+This pipeline is the absolute backbone of reliable AI agents.

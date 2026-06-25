@@ -1,0 +1,93 @@
+---
+title: 28. LangChain Models
+description: Initializing ChatOpenAI, ChatGoogle, and ChatGroq
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+# Implementing the Models
+
+In our previous *Hello Agent* module, we used the native SDKs directly. For this project, we are going to use **LangChain**!
+
+LangChain provides a consistent wrapper over different AI models. By using LangChain's `ChatModel` classes, we can swap between OpenAI, Gemini, and Groq without having to rewrite any of our core execution logic. 
+
+### 1. Installation
+
+First, we need to install the LangChain packages for our desired providers in the `backend` directory:
+
+```bash
+pnpm add @langchain/openai @langchain/google @langchain/groq
+```
+
+### 2. The Model Router
+
+Next, we create `backend/src/lc-mode.ts`. This file dynamically checks our environment variables and returns an initialized LangChain model based on the first available API key (or forces one if `PROVIDER` is set).
+
+Notice how we enforce `temperature: 0`. As we learned in Section 4, a temperature of 0 is the golden rule for reliable JSON outputs!
+
+```typescript title="backend/src/lc-mode.ts"
+import { ChatOpenAI } from "@langchain/openai";
+import { loadEnv } from "./env";
+import { ChatGoogle } from "@langchain/google";
+import { ChatGroq } from "@langchain/groq";
+
+export type Provider = "openai" | "gemini" | "groq";
+
+export function createChatModel() {
+  loadEnv();
+
+  const forced = (process.env.PROVIDER || "").toLowerCase();
+  const hasOpenAi = process.env.OPENAI_API_KEY;
+  const hasGemini = process.env.GOOGLE_API_KEY;
+  const hasGroq = process.env.GROQ_API_KEY;
+
+  // Golden Rule: Temperature 0 for JSON tasks!
+  const base = {
+    temperature: 0,
+  };
+
+  // 1. OpenAI (gpt-4o-mini)
+  if (forced === "openai" || (!forced && hasOpenAi)) {
+    return {
+      provider: "openai" as Provider,
+      model: new ChatOpenAI({
+        ...base,
+        model: "gpt-4o-mini",
+      }),
+    };
+  }
+
+  // 2. Google Gemini (gemini-2.5-flash-lite)
+  if (forced === "gemini" || (!forced && hasGemini)) {
+    return {
+      provider: "gemini" as Provider,
+      model: new ChatGoogle({
+        ...base,
+        model: "gemini-2.5-flash-lite",
+      }),
+    };
+  }
+
+  // 3. Groq (llama-3.3-70b)
+  if (forced === "groq" || (!forced && hasGroq)) {
+    return {
+      provider: "groq" as Provider,
+      model: new ChatGroq({
+        ...base,
+        model: "llama-3.3-70b-versatile",
+      }),
+    };
+  }
+
+  // Fallback
+  return {
+    provider: "gemini" as Provider,
+    model: new ChatGoogle({
+      ...base,
+      model: "gemini-2.5-flash-lite",
+    }),
+  };
+}
+```
+
+By returning both the initialized `model` and the `provider` string, our backend will always know exactly which AI generated the response while keeping the actual invocation code perfectly abstracted!

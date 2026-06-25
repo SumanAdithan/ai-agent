@@ -1,0 +1,55 @@
+---
+title: 29. Core Ask Logic
+description: Binding the Model and the Schema together
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Implementing the Core Ask Logic
+
+We now have our **Zod Schema** (the contract) and our **LangChain Router** (the models). It is time to bind them together to execute our first structured generation!
+
+Create a file named `ask-core.ts` in your backend. This file will export a single function that takes a user's query and returns a perfectly typed JSON object.
+
+### The Code
+
+```typescript title="backend/src/ask-core.ts"
+import { createChatModel } from "./lc-mode";
+import { AskResult, AskResultSchema } from "./schema";
+
+export async function askStructure(query: string): Promise<AskResult> {
+  // 1. Initialize our dynamically routed model
+  const { model } = createChatModel();
+
+  // 2. Define Lean Prompts
+  const system = "You are a concise assistant. Return only the requested JSON.";
+  const user = `Summarize for a beginner:\n${query}`;
+
+  // 3. Bind the Zod Schema to the Model
+  const structure = model.withStructuredOutput(AskResultSchema);
+  
+  // 4. Invoke the model!
+  const result = await structure.invoke([
+    {
+      role: "system",
+      content: system,
+    },
+    {
+      role: "human",
+      content: user,
+    },
+  ]);
+
+  return result;
+}
+```
+
+### Breaking it down
+
+1. **Lean Prompts:** Notice how incredibly short the `system` prompt is. Because we are relying on LangChain's structured output features, we don't need to write giant paragraphs begging the model to format things correctly. We just tell it to be concise!
+2. **`withStructuredOutput`:** This is the most important method in this entire project. By passing `AskResultSchema` into this method, LangChain does the heavy lifting of telling the underlying provider API (OpenAI/Gemini/Groq) exactly what JSON structure to force on the token level. 
+3. **Perfect Types:** Look at the return type of our function: `Promise<AskResult>`. We know for a fact that `result` will contain exactly `{ summary: string, confidence: number }`. We don't need to do any manual `JSON.parse()` or error-prone casting!
+
+<Callout type="info">
+With just a few lines of code, we have achieved **Schema → Structured Output Mode → Predictable JSON**! 
+</Callout>
