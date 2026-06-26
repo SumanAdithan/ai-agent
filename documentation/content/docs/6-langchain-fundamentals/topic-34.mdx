@@ -1,0 +1,31 @@
+---
+title: 34. Core Building Blocks
+description: Prompts, Models, and Output Parsers
+---
+
+# Core Building Blocks
+
+Before we can build complex AI pipelines, we need to understand the individual pieces that make up those pipelines. In LangChain, almost every workflow is constructed using three core building blocks.
+
+### 1. Prompts
+
+A Prompt defines **what** to ask the model and **how** to ask it. 
+
+Instead of writing raw string concatenations, LangChain allows us to define Prompt Templates. These templates usually consist of:
+1.  **System Role:** High-level instructions defining the AI's persona or constraints.
+2.  **Instructions:** The specific task the AI needs to complete.
+3.  **Placeholders:** Variables that will be dynamically injected at runtime (e.g., `{user_input}`).
+
+By using templates, our prompts become predictable, highly reusable, and much easier to read!
+
+### 2. Models
+
+The Model represents **which LLM** we are calling.
+
+Because of LangChain's unified abstraction, all models expose the exact same interface. Whether you are using `ChatOpenAI` (ChatGPT), `ChatGoogle` (Gemini), or `ChatGroq` (Llama), the way you pass prompts into them and receive answers out of them is completely identical.
+
+### 3. Output Parsers
+
+An Output Parser is responsible for turning raw text into **structured data**.
+
+By default, an LLM simply returns a long string of text. An output parser (like the one we used under the hood with `.withStructuredOutput(...)`) takes that raw string, attempts to parse it as JSON, validates it against a schema (like Zod), and returns a perfectly typed JavaScript object.

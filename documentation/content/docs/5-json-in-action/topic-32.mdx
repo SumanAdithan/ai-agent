@@ -1,3 +1,17 @@
+---
+title: 32. The Frontend UI
+description: Connecting our structured outputs to a React interface
+---
+
+# Creating the Frontend UI
+
+With our API proxy in place, we can finally build the interactive user interface! We will use Next.js, React, and Shadcn UI components to build a beautiful "Ask Anything" experience.
+
+### The Code
+
+Replace the contents of `client/src/app/page.tsx` with the following code. Notice how we use the exact same `Answer` type that we generated from Zod in our backend!
+
+```tsx title="client/src/app/page.tsx"
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -5,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { FormEvent, useRef, useState } from "react";
 
+// The shape of this type exactly matches our backend Zod Schema!
 type Answer = {
   summary: string;
   confidence: number;
@@ -14,6 +29,7 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [answers, setAnswers] = useState<Answer[]>([]);
   const [loading, setLoading] = useState(false);
+  
   const formRef = useRef<HTMLFormElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -25,6 +41,7 @@ export default function Home() {
     setLoading(true);
 
     try {
+      // 1. Send the query to our Next.js API Route proxy
       const res = await fetch("/api/ask", {
         method: "POST",
         headers: {
@@ -33,19 +50,18 @@ export default function Home() {
         body: JSON.stringify({ query: q }),
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
         throw new Error("Request failed");
       }
 
+      // 2. We can confidently extract summary & confidence!
+      const data = await res.json();
       const { summary, confidence } = data;
 
+      // 3. Append the new answer to our UI state
       setAnswers((prev) => [...prev, { summary, confidence }]);
       setQuery("");
       inputRef.current?.focus();
-
-      console.log(data);
     } catch (e) {
       console.log(e);
     } finally {
@@ -86,6 +102,8 @@ export default function Home() {
             )}
           </CardContent>
         </Card>
+
+        {/* Floating Input Form */}
         <form
           ref={formRef}
           onSubmit={handleQuerySubmit}
@@ -109,3 +127,13 @@ export default function Home() {
     </div>
   );
 }
+```
+
+### How it all connects
+When the user submits the form:
+1.  **React** sends `{ query: "..." }` to `/api/ask`.
+2.  **Next.js API Route** proxies that request to `http://localhost:5000/ask`.
+3.  **Express** receives it and calls `askStructured(query)`.
+4.  **LangChain** wraps the query and the Zod Schema, passing them to the **Provider API** (like Gemini or OpenAI).
+5.  **Provider API** natively responds with a perfect JSON structure.
+6.  That perfectly typed JSON travels all the way back down the chain to our React client, where we immediately destructure `const { summary, confidence } = data;` and update the UI!

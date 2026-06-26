@@ -1,0 +1,75 @@
+---
+title: 30. The Express Server
+description: Exposing our structured LLM logic via a REST API
+---
+
+# Setting up the Express Server
+
+To allow our Next.js frontend to securely interact with our AI models without exposing our API keys to the browser, we need to wrap our core execution logic in a backend server. 
+
+We will use Express.js to create a simple HTTP API.
+
+### The Server Code
+
+Create a file named `server.ts` in your backend directory.
+
+```typescript title="backend/src/server.ts"
+import express from "express";
+import cors from "cors";
+import { loadEnv } from "./env";
+import { askStructured } from "./ask-core";
+
+loadEnv();
+
+const app = express();
+
+// 1. Enable CORS for our Next.js client
+app.use(
+  cors({
+    origin: ["http://localhost:3000"],
+    methods: ["POST", "GET", "OPTIONS", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    credentials: false,
+  }),
+);
+
+// 2. Parse incoming JSON requests
+app.use(express.json());
+
+// 3. Define the /ask route
+app.post("/ask", async (req, res) => {
+  try {
+    const { query } = req.body ?? {};
+    
+    // Basic validation
+    if (!query || !String(query).trim()) {
+      return res.status(400).json({ error: "Field 'query' is required" });
+    }
+
+    // Call our LangChain routing logic
+    const out = await askStructured(query);
+    
+    // Return the perfectly formatted JSON!
+    return res.status(200).json(out);
+  } catch (err: any) {
+    return res.status(500).json({
+      error: "Failed to answer",
+    });
+  }
+});
+
+const PORT = process.env.PORT || 8000;
+
+app.listen(PORT, () => {
+  console.log(`Api is listening to port ${PORT}`);
+});
+```
+
+### How it works
+
+1. **CORS:** We use the `cors` middleware to explicitly allow incoming requests from our frontend running on `http://localhost:3000`. This prevents cross-origin errors in the browser.
+2. **The Route:** We expose a single `POST /ask` endpoint. It expects a JSON payload containing a `query` string.
+3. **Execution:** Inside the route handler, we pass the user's query into the `askStructured()` function we built in the previous topic. Because we used `.withStructuredOutput(...)` inside that function, we know the resulting `out` variable will be a perfectly formatted JavaScript object that matches our Zod Schema.
+4. **Response:** We immediately return that structured object back to the client as JSON!
+
+With this server running, our backend architecture is completely finished and ready to serve structured AI generations!

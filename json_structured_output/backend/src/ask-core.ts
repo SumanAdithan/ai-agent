@@ -1,7 +1,7 @@
 import { createChatModel } from "./lc-mode";
 import { AskResult, AskResultSchema } from "./schema";
 
-export async function askStructure(query: string): Promise<AskResult> {
+export async function askStructured(query: string): Promise<AskResult> {
   const { model } = createChatModel();
 
   // Keep instructions brief so that schema stays visible to the model

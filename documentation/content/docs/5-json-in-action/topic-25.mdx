@@ -5,8 +5,39 @@ description: Project Overview
 
 import { Callout } from 'fumadocs-ui/components/callout';
 
-# What are we building?
+# Project Overview: JSON & Structured Output
 
-<Callout type="warn">
-  This section is a placeholder and will be updated soon!
+In the previous section, we learned the theory behind the **JSON-first mindset**. We learned that LLMs are much more powerful when we treat them as data engines rather than just conversational chatbots.
+
+In this project, we are going to put that theory into practice!
+
+### The Application Architecture
+
+We will be building a complete, full-stack application divided into two parts:
+
+1.  **The Client (Next.js & React):** A sleek, modern frontend UI where users can type in any question.
+2.  **The Backend (Express.js):** A secure Node.js server that acts as our AI orchestration layer.
+
+### The Goal: Predictable Data
+
+The primary goal of this project is to force the LLM to return a strictly typed JSON object instead of a free-form paragraph. 
+
+Specifically, no matter what the user asks, we want our AI backend to *always* return an object matching this exact shape:
+
+```json
+{
+  "summary": "A short, concise answer to the user's question.",
+  "confidence": 0.95
+}
+```
+
+### The Tech Stack
+
+To achieve this predictable output, we will be using:
+*   **Zod:** To mathematically define our schema contract.
+*   **LangChain:** To dynamically route between OpenAI, Gemini, and Groq models without changing our code.
+*   **`withStructuredOutput`:** The magic LangChain method that binds our Zod schema directly to the model's token generation!
+
+<Callout type="info">
+By the end of this project, you will understand exactly how to build AI features that reliably return data that can be rendered directly into a UI component without fear of hallucinated formats!
 </Callout>

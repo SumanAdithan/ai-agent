@@ -1,0 +1,57 @@
+---
+title: 31. Next.js API Proxy
+description: Securely calling our backend from the frontend
+---
+
+# Next.js API Proxy
+
+With our Express backend fully functional and listening on port `5000`, we now need to connect our Next.js frontend to it.
+
+While we *could* theoretically make `fetch` requests directly from our React components to the Express backend, a much cleaner and safer architectural pattern is to use **Next.js Route Handlers** as a proxy.
+
+### Why proxy the request?
+1.  **Security:** It completely hides the backend URL from the client's browser.
+2.  **Centralization:** We can handle authentication, logging, and global error handling in one Next.js route before it ever hits the Express server.
+3.  **CORS:** If we expand the app later, keeping requests strictly between our own Next.js server and Express server bypasses browser CORS restrictions completely.
+
+### The API Route
+
+In your Next.js client, create a new route handler at `src/app/api/ask/route.ts`.
+
+```typescript title="client/src/app/api/ask/route.ts"
+import { NextResponse } from "next/server";
+
+// Fallback to localhost:5000 if the environment variable isn't set
+const BACKEND_URL =
+  process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5000";
+
+export async function POST(req: Request) {
+  try {
+    // 1. Parse the incoming request from the React component
+    const body = await req.json();
+    
+    // 2. Proxy the request to our Express backend
+    const apiResponse = await fetch(`${BACKEND_URL}/ask`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    // 3. Parse the backend's JSON response
+    const data = await apiResponse.json();
+
+    // 4. Return it exactly as-is to the frontend
+    return NextResponse.json(data, { status: apiResponse.status });
+  } catch (err) {
+    // 5. Catch network errors and return a 500 status code
+    return NextResponse.json(
+      { error: "Some error occured" },
+      { status: 500 }
+    );
+  }
+}
+```
+
+This route acts as a perfectly transparent bridge. It takes the JSON from the browser, throws it at the Express server, waits for the structured output to come back, and hands it right back to the browser!

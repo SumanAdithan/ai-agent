@@ -1,0 +1,39 @@
+---
+title: 33. Why LangChain?
+description: LangChain JS vs Raw SDKs
+---
+
+# Why use LangChain JS over Raw SDKs?
+
+Up until this point, we have seen both approaches:
+1. In Section 3, we built the *Hello Agent* using the **raw SDKs** provided directly by OpenAI and Google.
+2. In Section 5, we built the *Structured Output* backend using **LangChain**.
+
+While raw SDKs are great for simple, low-level calls, as our AI applications grow in complexity, we quickly realize that we need **LangChain**.
+
+### The Problem with Raw SDKs
+
+When building a real-world AI agent using raw SDKs, you have to write a massive amount of boilerplate code to handle:
+*   Switching between multiple model providers (e.g., swapping OpenAI for Gemini requires rewriting your entire API call logic).
+*   Defining and calling tools.
+*   Building RAG (Retrieval-Augmented Generation) pipelines.
+*   Implementing retry logic for when the API fails.
+*   Logging and observability.
+
+### The LangChain Solution
+
+LangChain is a powerful AI toolkit that provides consistent abstractions and shared utilities for all of the problems listed above.
+
+The core purpose of LangChain is **easy integration and orchestration**.
+
+By using LangChain, you get a simple, unified abstraction layer for:
+*   **Models:** You can seamlessly swap between `ChatOpenAI`, `ChatGoogle`, or `ChatGroq` without changing your execution code.
+*   **Prompts:** Reusable templates for injecting variables into system instructions.
+*   **Output Parsing:** Tools like `.withStructuredOutput(...)` that automatically bind Zod schemas to models.
+*   **Retrievers & Vector DBs:** Built-in connectors for almost every database on the market.
+
+### LCEL: LangChain Expression Language
+
+One of the most powerful features of LangChain is **LCEL**. 
+
+LCEL is a declarative pipeline system that allows you to cleanly compose multiple functions, prompts, models, and parsers together into a single, highly readable chain. It handles streaming, retries, and batch execution automatically!

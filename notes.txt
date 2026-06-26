@@ -230,3 +230,50 @@ Section 5: JSON & Structured Output in Action
     27. Creating zod schema
     28. implement OpenAi, Gemini and Groq models
     29. Implementing core ask logic
+    30. implementing ask backend route and setting up express server
+    31. Creating next js api route
+    32. Creating ask UI component and integrating with ask api route
+
+Section 6: LangChain fundamentals
+    33. Why use LangChain JS over raw SDKs
+        - Raw SDKs = low-level calls
+        - LangChain = shared patterns & utilities
+        - Easier to switch models & compose
+
+        purpose: (easy integration)
+            - multiple model switching
+            - tools
+            - RAG
+            - retries
+            - logging
+
+        LangChain? AI toolkit work with multiple model providers, simple abstraction for prompts, output, 
+        parsing tools, retrievers, working with vector db
+
+        LCEL -> pipeline to compose multiple functions together
+
+    34. Core building blocks
+        - Prompt: what to ask + how
+            - 1. system role
+            - 2. instructions
+            - 3. placeholder for variables
+
+            - prompt should be predictable, reusable and earier to read
+        - Model: which LLM we call
+
+        - Output Parser: turns text -> data
+
+    35. Runnables & LCEL
+        - Runnables: Generic unit of work that can be invoked, batched, streamed
+            - each step in LLm pipeline is runnable
+            - runnables -> takes input -> does something -> returns output
+            runnables are (prompt template, calling model, getting result)
+
+            - runnable sequence (run steps in order), 
+            Where the output of each is the input of the next (a->b->c->d->e)
+            - runnable map (run multiple runnables in branches)
+        - LCEL: LangChain Expression Language
+            - it is used to connect those runnables together
+            - .pipe, .invoke
+
+Section 7:

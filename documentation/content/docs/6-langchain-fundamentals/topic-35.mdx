@@ -1,0 +1,36 @@
+---
+title: 35. Runnables & LCEL
+description: Understanding the foundation of LangChain's pipeline architecture
+---
+
+# Runnables & LCEL
+
+Now that we understand the core building blocks (Prompts, Models, and Parsers), we need to understand how to connect them. This is where **Runnables** and **LCEL** come into play.
+
+### What is a Runnable?
+
+A Runnable is a generic unit of work in LangChain that can be invoked, batched, or streamed. 
+
+Virtually **every single step** in a LangChain pipeline is a Runnable. A Prompt Template is a runnable, a Chat Model is a runnable, and an Output Parser is a runnable!
+
+All runnables follow the exact same predictable pattern:
+*   They take an **input**.
+*   They **do something** with that input.
+*   They return an **output**.
+
+Because every component shares this exact same interface, we can chain them together effortlessly!
+
+### Runnable Architectures
+
+When we combine multiple runnables, we typically use one of two architectures:
+
+1.  **Runnable Sequence:** This is a linear pipeline where the output of the first runnable becomes the input of the second, and so on (`A -> B -> C`). For example: `Prompt -> Model -> Parser`.
+2.  **Runnable Map:** This allows you to run multiple runnables in parallel branches simultaneously. For example, branching out to fetch data from three different APIs at the exact same time before combining their results.
+
+### LCEL: LangChain Expression Language
+
+So, how do we actually wire these runnables together in code? We use **LCEL (LangChain Expression Language)**.
+
+LCEL is the syntax used to connect runnables. In JavaScript/TypeScript, we use the `.pipe()` and `.invoke()` methods. 
+
+When you `.pipe()` a prompt into a model, you are creating a new, combined Runnable Sequence that you can then `.invoke()` as a single unit!
