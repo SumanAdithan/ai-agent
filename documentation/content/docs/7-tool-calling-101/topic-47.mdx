@@ -1,0 +1,121 @@
+---
+title: 47. Web Pipeline Part 1
+description: Orchestrating search, fetching, and summarization using LCEL
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Build LCEL: Web Pipeline (Part 1)
+
+This is one of the most critical and complex parts of our agent. We are finally orchestrating all of our standalone tools into a single, cohesive **LangChain Expression Language (LCEL)** pipeline!
+
+When the Regex Router determines the user is asking for live data, the request enters the **Web Pipeline**. This pipeline has a very specific sequence of events:
+1. Search the web using Tavily.
+2. Visit every result URL and scrape the raw text.
+3. Summarize the text of every single URL using an LLM.
+4. Pass the summarized context into the final generation prompt.
+
+Let's build the first half of this pipeline!
+
+### The Implementation
+
+Create a new file at `agent/src/search_tool/web-pipeline.ts`:
+
+```typescript title="agent/src/search_tool/web-pipeline.ts"
+import { RunnableLambda } from "@langchain/core/runnables";
+import { webSearch } from "../utils/websearch";
+import { openUrl } from "../utils/openUrl";
+import { summarize } from "../utils/summarize";
+
+const setTopResults = 5;
+
+// STEP 1: The Search Node
+export const webSearchStep = RunnableLambda.from(
+  async (ctx: { q: string; mode: "web" | "direct" }) => {
+    // Call Tavily!
+    const results = await webSearch(ctx.q); 
+
+    return {
+      ...ctx,
+      results,
+    };
+  },
+);
+
+// STEP 2: The Scrape & Summarize Node
+export const openAndSummarizeStep = RunnableLambda.from(
+  async (ctx: { q: string; mode: "web" | "direct"; results: any[] }) => {
+    // 1. Fallback if Tavily returned nothing
+    if (!Array.isArray(ctx.results) || ctx.results.length === 0) {
+      return {
+        ...ctx,
+        pageSummaries: [],
+        fallback: "no-results" as const,
+      };
+    }
+
+    const extractTopResults = ctx.results.slice(0, setTopResults);
+
+    // 2. Fetch and summarize all URLs in parallel!
+    const settledResults = await Promise.allSettled(
+      extractTopResults.map(async (result: any) => {
+        const opened = await openUrl(result.url);
+        const summarizeContent = await summarize(opened.content);
+
+        return {
+          url: opened.url,
+          summary: summarizeContent.summary,
+        };
+      }),
+    );
+
+    // 3. Filter out any failed scrapes
+    const settledResultPageSummaries = settledResults
+      .filter((settledResult) => settledResult.status === "fulfilled")
+      .map((s) => s.value);
+
+    // 4. Fallback if EVERY single URL failed to scrape
+    if (settledResultPageSummaries.length === 0) {
+      const fallbackSnippetSummaries = extractTopResults
+        .map((result: any) => ({
+          url: result.url,
+          summary: String(result.snippet || result.title || "").trim(),
+        }))
+        .filter((x: any) => x.summary.length > 0);
+
+      return {
+        ...ctx,
+        pageSummaries: fallbackSnippetSummaries,
+        fallback: "snippets" as const,
+      };
+    }
+
+    // 5. Success! Return the full page summaries
+    return {
+      ...ctx,
+      pageSummaries: settledResultPageSummaries,
+      fallback: "none" as const,
+    };
+  },
+);
+```
+
+### Deep Dive: Architectural Decisions
+
+<Callout title="Why RunnableLambda?" type="info">
+  In LangChain, every node in a pipeline must be a `Runnable`. By wrapping our standard asynchronous TypeScript functions in `RunnableLambda.from()`, we allow them to seamlessly accept input from the previous step and pipe their output to the next step!
+</Callout>
+
+#### 1. State Accumulation (The Context Object)
+Notice how every step returns `{ ...ctx, newProperty }`? This is a core pattern in LCEL. Instead of just returning the new data, we pass along the entire state (the user's query, the mode, the search results) so that the final node has access to the full context of the pipeline's execution!
+
+#### 2. Parallel Processing for Speed
+In `openAndSummarizeStep`, we use `Promise.allSettled()`. This is absolutely crucial for performance.
+If we fetched and summarized 5 URLs sequentially, and each took 3 seconds, the user would be waiting 15 seconds! By using `Promise.allSettled()`, we fire all 5 requests at the exact same time, reducing the total wait time to just ~3 seconds!
+
+#### 3. Bulletproof Fallbacks
+The web is messy. Websites block scrapers, pages 404, and network requests timeout. 
+We handle this gracefully using three layers of fallbacks:
+*   **No Results:** If Tavily crashes or finds nothing, we safely return an empty array with `fallback: "no-results"`.
+*   **Partial Failures:** Because we use `Promise.allSettled` instead of `Promise.all`, if 1 URL fails to scrape, the other 4 will still succeed! We just filter out the rejections.
+*   **Total Failure:** If *all* 5 URLs block our scraper, we don't crash the app! Instead, we fallback to using the tiny 220-character `snippet` that Tavily provided during the initial search. It's not as good as the full article, but it's better than failing!

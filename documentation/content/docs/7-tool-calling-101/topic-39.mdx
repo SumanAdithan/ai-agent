@@ -1,0 +1,50 @@
+---
+title: 39. Environment Schema
+description: Validating our .env variables with Zod
+---
+
+# Environment Schema
+
+Before we start building our search agent, we need to ensure that our backend `agent` has access to all the necessary API keys and configuration settings.
+
+Because AI agents often rely on a complex mix of external tools and providers, a missing API key can cause the entire pipeline to crash deep inside the orchestration layer.
+
+To prevent this, we use **Zod** to validate our environment variables at startup!
+
+### The Code
+
+Create `agent/src/shared/env.ts` and add the following code:
+
+```typescript title="agent/src/shared/env.ts"
+import { z } from "zod";
+
+const EnvSchema = z.object({
+  // Server Config
+  PORT: z.string().default("5000"),
+  ALLOWED_ORIGIN: z.url().default("http://localhost:3000"),
+  
+  // Model Config
+  MODEL_PROVIDER: z.enum(["openai", "gemini", "groq"]).default("gemini"),
+  OPENAI_API_KEY: z.string().optional(),
+  GOOGLE_API_KEY: z.string().optional(),
+  GROQ_API_KEY: z.string().optional(),
+  
+  // Model Defaults
+  OPENAI_MODEL: z.string().default("gpt-5-mini"),
+  GEMINI_MODEL: z.string().default("gemini-2.5-flash-lite"),
+  GROQ_MODEL: z.string().default("llama-3.3-70b-versatile"),
+  
+  // Search Tool Config
+  SEARCH_PROVIDER: z.string().default("tavily"),
+  TAVILY_API_KEY: z.string().optional(),
+});
+
+export const env = EnvSchema.parse(process.env);
+```
+
+### Breaking it down
+
+1. **`z.enum(["openai", "gemini", "groq"])`**: This ensures that if the user manually overrides the `MODEL_PROVIDER` in their `.env` file, they *must* pick one of these three exact strings. If they type "chatgpt", Zod will immediately throw an error when the server starts!
+2. **`z.string().default(...)`**: We supply the exact model string names we want to use for each provider (like `"gpt-5-mini"`). This way, if a provider releases a newer model tomorrow, we can just update our `.env` file to point to it without ever touching our source code!
+3. **`TAVILY_API_KEY`**: We've added a specific key for Tavily, the search engine tool we will be hooking up in our LangChain pipeline!
+4. **`EnvSchema.parse(process.env)`**: We instantly parse the global node `process.env` object. By exporting the result as `env`, the rest of our application can simply import `env` and enjoy perfect autocomplete and type safety for all our configuration variables!

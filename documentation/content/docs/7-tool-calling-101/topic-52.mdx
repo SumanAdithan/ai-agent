@@ -1,0 +1,84 @@
+---
+title: 52. Express Server Setup
+description: Exposing our AI agent via a REST API
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Add a search route and setup Express server
+
+Our LangChain search agent is fully built, tested, and robust. But right now, it only exists as a TypeScript function inside our backend. We need to expose it so that our Next.js frontend can actually talk to it!
+
+We will do this by wrapping our `runSearch` function inside an **Express.js API Route**.
+
+### 1. The Route Handler
+
+First, let's create a dedicated file for our search endpoint. Create a new folder named `routes` inside `agent/src`, and add `search-lcel.ts`:
+
+```typescript title="agent/src/routes/search-lcel.ts"
+import { Router } from "express";
+import { SearchInputSchema } from "../utils/schemas";
+import { runSearch } from "../search_tool/search-chain";
+
+export const searchRouter = Router();
+
+searchRouter.post("/", async (req, res) => {
+  try {
+    // 1. Validate the incoming request body from the frontend
+    const input = SearchInputSchema.parse(req.body);
+    
+    // 2. Pass the validated input to our LCEL graph
+    const result = await runSearch(input);
+    
+    // 3. Return the exact SearchAnswer JSON to the frontend!
+    res.status(200).json(result);
+  } catch (err) {
+    const msg = (err as Error)?.message ?? "unknown error occured";
+    res.status(400).json({ error: msg });
+  }
+});
+```
+
+#### Breaking it down
+Because we have spent so much time building robust Zod contracts, this route is incredibly clean! 
+1. We parse `req.body` using `SearchInputSchema`. If the frontend sends a malformed request, Zod throws an error instantly, saving us an expensive, useless LLM call!
+2. We await `runSearch(input)`. This executes our entire `router -> branch -> fetch -> summarize -> LLM -> validate` pipeline behind the scenes.
+3. Because our pipeline ends with `finalValidateAndPolish`, we know with 100% absolute certainty that `result` exactly matches the shape our UI is expecting. We just send it directly back as JSON!
+
+### 2. The Express Server
+
+Now, let's wire up the main server entry point. Open (or replace) `agent/src/index.ts`:
+
+```typescript title="agent/src/index.ts"
+import "dotenv/config";
+import express from "express";
+import cors from "cors";
+import { searchRouter } from "./routes/search-lcel";
+
+const app = express();
+
+// 1. Enable CORS so our frontend can make requests
+app.use(
+  cors({
+    origin: process.env.ALLOWED_ORIGIN,
+  }),
+);
+
+// 2. Parse incoming JSON payloads
+app.use(express.json());
+
+// 3. Mount our new AI route!
+app.use("/search", searchRouter);
+
+const port = process.env.PORT;
+
+app.listen(port, () => {
+  console.log(`server is now running on port ${port}`);
+});
+```
+
+#### Breaking it down
+*   **CORS:** Cross-Origin Resource Sharing. Because our Next.js frontend will run on a different port (e.g. 3000) than our Express backend (e.g. 8080), browsers will block the request for security reasons. Using the `cors` middleware with the `ALLOWED_ORIGIN` from our `.env` file explicitly tells the browser that this connection is safe!
+*   **Mounting the Route:** `app.use("/search", searchRouter)` attaches our router. This means the Next.js frontend will make a POST request to `http://localhost:8080/search` to trigger our agent!
+
+And just like that, the entire backend is complete! Our LLM pipeline is now a live, production-ready REST API. Next, we move to the frontend!

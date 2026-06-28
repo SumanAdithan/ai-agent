@@ -1,0 +1,66 @@
+---
+title: 49. Direct Pipeline
+description: Handling fast, cheap requests without web search
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Build LCEL: Direct Pipeline
+
+We've spent a lot of time building our complex, multi-stage Web Pipeline. But what happens if the user just asks "What is an LLM?" or "Who was the first president of the United States?"
+
+Our Regex Router will correctly identify that this query does *not* require live data, and it will set the mode to `"direct"`. 
+
+When the mode is `"direct"`, we want to completely bypass Tavily, fetch, and summarization to save both time and money! We can do this by building a parallel **Direct Pipeline**.
+
+### The Implementation
+
+Create a new file at `agent/src/search_tool/direct-pipeline.ts`:
+
+```typescript title="agent/src/search_tool/direct-pipeline.ts"
+// cheap mode
+// call tavily, fetch, summarize - dont
+
+import { RunnableLambda } from "@langchain/core/runnables";
+import { Candidate } from "./types";
+import { getChatModel } from "../shared/models";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+
+// ask the model
+// get a short helpful ans
+
+export const directPath = RunnableLambda.from(
+  async (ctx: { q: string; mode: "web" | "direct" }): Promise<Candidate> => {
+    const model = getChatModel({ temperature: 0.2 });
+
+    const res = await model.invoke([
+      new SystemMessage(
+        [
+          "You answer briefly and clearly for beginners",
+          "If unsure, say so",
+        ].join("\n"),
+      ),
+      new HumanMessage(ctx.q),
+    ]);
+
+    const directAns = (
+      typeof res.content === "string" ? res.content : String(res.content)
+    ).trim();
+
+    return {
+      answer: directAns,
+      sources: [],
+      mode: "direct",
+    };
+  },
+);
+```
+
+### Breaking it down
+
+<Callout title="Why is this separate?" type="info">
+  You might notice this code looks incredibly similar to the fallback branch inside `web-pipeline.ts`! The reason we pull it out into its own `directPath` Runnable is for orchestration. We will eventually wire our graph to say: "If `mode === 'direct'`, route directly to `directPath` and skip the Web Pipeline entirely!"
+</Callout>
+
+1. **Lightweight and Fast:** Notice what is missing. No `webSearch()`, no `Promise.allSettled()`, no HTML parsing! This step just immediately hits the LLM and asks it to answer using its own internal training data. Because of this, it resolves in milliseconds instead of seconds!
+2. **The Output Contract:** Notice that it still returns a `Candidate` object (`Promise<Candidate>`). This is incredibly important. By ensuring that both `webBasedPath` and `directPath` output the exact same object shape, the downstream code (like our UI) doesn't have to care which path was taken! It will just render the `answer` and the `sources` (which will simply be an empty array in this case).

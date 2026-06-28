@@ -1,0 +1,69 @@
+---
+title: 51. The Search Chain
+description: Wiring the entire LCEL graph together
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Build LCEL: The Search Chain
+
+This is the moment we've been building up to! We have created several isolated, highly optimized nodes:
+*   `routerStep`: Determines if the query needs web access.
+*   `webPath`: The complex pipeline for scraping and summarizing live web pages.
+*   `directPath`: The lightning-fast pipeline for answering from internal knowledge.
+*   `finalValidateAndPolish`: The self-healing JSON enforcer.
+
+Now, it is time to wire them all together into a single, unified LangChain pipeline!
+
+### The Implementation
+
+Create a new file at `agent/src/search_tool/search-chain.ts`:
+
+```typescript title="agent/src/search_tool/search-chain.ts"
+import { RunnableBranch, RunnableSequence } from "@langchain/core/runnables";
+import { webPath } from "./web-pipeline";
+import { directPath } from "./direct-pipeline";
+import { routerStep } from "./route-strategy";
+import { finalValidateAndPolish } from "./final-validate";
+import { SearchInput } from "../utils/schemas";
+
+// STEP 1: The Branching Logic
+const branch = RunnableBranch.from<{ q: string; mode: "web" | "direct" }, any>([
+  [(ctx) => ctx.mode === "web", webPath],
+  directPath, // Default fallback if the condition above isn't met
+]);
+
+// STEP 2: The Master Sequence
+export const searchChain = RunnableSequence.from([
+  routerStep,
+  branch,
+  finalValidateAndPolish,
+]);
+
+// STEP 3: The Execution Wrapper
+export async function runSearch(ctx: SearchInput) {
+  return await searchChain.invoke(ctx);
+}
+```
+
+### Breaking it down
+
+<Callout title="The Power of LCEL" type="info">
+  Notice how clean `searchChain` is? It reads almost like English! "Run the router, take a branch, and validate the output." All the complex scraping, AI fallbacks, and token management are hidden beneath these beautiful abstractions!
+</Callout>
+
+#### 1. RunnableBranch
+A `RunnableBranch` is LangChain's version of an `if/else` statement. 
+It takes an array where the first item is an evaluation tuple: `[condition, runnableToExecute]`. 
+If `ctx.mode === "web"`, it executes our complex `webPath`. If that condition is false, it falls back to the default `directPath`. 
+
+Because both `webPath` and `directPath` return the exact same `Candidate` object shape, the downstream nodes don't care which path was taken!
+
+#### 2. The Master Sequence
+This is the heart of our application:
+1. First, the user's string (`q`) enters the `routerStep`, outputting `{ q, mode }`.
+2. That object flows into the `branch`. Depending on the `mode`, it traverses either the web or direct path, outputting a `Candidate` object.
+3. That `Candidate` object flows into `finalValidateAndPolish`, which strictly enforces the `SearchAnswerSchema` using self-healing logic.
+
+#### 3. Execution
+Finally, we wrap `searchChain.invoke(ctx)` in an async function so that the rest of our Express/Next.js backend can import `runSearch` and easily execute the entire graph with a single function call!

@@ -1,0 +1,35 @@
+---
+title: 41. Web Search Schema
+description: Defining the shape of our internet searches
+---
+
+# Web Search Schema
+
+In a previous section, we used **Zod** to force our AI to return a specific JSON shape (`{ summary, confidence }`). 
+
+In this project, we are going to use Zod again, but this time we are using it to define the shape of the data we get back from our **Web Search Tool** (Tavily).
+
+### The Code
+
+Create a new file at `agent/src/utils/schemas.ts` and add the following code:
+
+```typescript title="agent/src/utils/schemas.ts"
+import z from "zod";
+
+// The legal contract between our Backend -> AI models -> Frontend
+export const WebSearchResultSchema = z.object({
+  title: z.string().min(1),
+  url: z.url(),
+  snippet: z.string().optional().default(""),
+});
+
+export const webSearchResultsSchema = z.array(WebSearchResultSchema).max(10);
+```
+
+### Why validate search results?
+
+You might be wondering: *Why do we need a schema if we are just searching the web?*
+
+1. **The Legal Contract:** This schema acts as a strict contract across our entire stack. It ensures that when our Next.js frontend renders the search citations, it is absolutely guaranteed to receive a `title`, a valid `url`, and a `snippet`.
+2. **Cost Saving & Safety:** When the AI searches the web, we pass the results back into the LLM context window so it can read them and generate an answer. If an external API returns malformed data or crashes, Zod will immediately catch the error *before* we waste money sending garbage data into the LLM!
+3. **Array Caps:** Notice `z.array(...).max(10)`. We explicitly cap the results to a maximum of 10. LLMs charge by the token. If a search tool accidentally returns 50 web pages, we would flood our context window and incur massive API costs. This one line of Zod protects our wallet!

@@ -1,0 +1,96 @@
+---
+title: 46. Route Strategy
+description: Making intelligent routing decisions before hitting the LLM
+---
+
+# Build LCEL: Route Strategy
+
+We know our agent needs to choose between the `"web"` path and the `"direct"` path. But how does it decide?
+
+While we *could* use a complex LLM Tool call to make this decision, that adds latency and token costs for every single user message! Instead, we can use a highly optimized, lightning-fast **Regex Router** to determine if a query requires web access *before* the LLM even sees it!
+
+### The Implementation
+
+First, add the input validation schema to `agent/src/utils/schemas.ts`:
+
+```typescript title="agent/src/utils/schemas.ts"
+// ... previous code
+
+export const SearchInputSchema = z.object({
+  q: z.string().min(5, "Please ask a specific query"),
+});
+
+export type SearchInput = z.infer<typeof SearchInputSchema>;
+```
+
+Next, create the routing logic in `agent/src/search_tool/route-strategy.ts`:
+
+```typescript title="agent/src/search_tool/route-strategy.ts"
+import { RunnableLambda } from "@langchain/core/runnables";
+import { SearchInputSchema } from "../utils/schemas";
+
+export function routeStrategy(q: string): "web" | "direct" {
+  const trimedQuery = q.toLocaleLowerCase().trim();
+
+  // 1. Long queries often contain complex context requiring a search
+  const isLongQuery = trimedQuery.length > 70;
+
+  // 2. Mentions of recent years (2024-2039) likely require up-to-date info
+  const recentYearRegex = /\b20(2[4-9]|3[0-9])\b/.test(trimedQuery);
+
+  // 3. E-commerce/tech patterns requiring live data
+  const patterns: RegExp[] = [
+    /\btop[-\s]*\d+\b/u,
+    /\bbest\b/u,
+    /\brank(?:ing|ings)?\b/u,
+    /\bwhich\s+is\s+better\b/u,
+    /\b(?:vs\.?|versus)\b/u,
+    /\bcompare|comparison\b/u,
+
+    /\bprice|prices|pricing|cost|costs|cheapest|cheaper|affordable\b/u,
+    /\bunder\s*\d+(?:\s*[kK])?\b/u,
+    /\p{Sc}\s*\d+/u, // currency symbols
+
+    /\blatest|today|now|current\b/u,
+    /\bnews|breaking|trending\b/u,
+    /\b(released?|launch|launched|announce|announced|update|updated)\b/u,
+    /\bchangelog|release\s*notes?\b/u,
+
+    /\bdeprecated|eol|end\s*of\s*life|sunset\b/u,
+    /\broadmap\b/u,
+
+    /\bworks\s+with|compatible\s+with|support(?:ed)?\s+on\b/u,
+    /\binstall(ation)?\b/u,
+
+    /\bnear\s+me|nearby\b/u,
+  ];
+
+  const isQueryPresentInPatterns = patterns.some((pattern) =>
+    pattern.test(trimedQuery)
+  );
+
+  // 4. Decision Time!
+  if (isLongQuery || recentYearRegex || isQueryPresentInPatterns) {
+    return "web";
+  } else {
+    return "direct";
+  }
+}
+
+// 5. Wrap in a LangChain Runnable
+export const routerStep = RunnableLambda.from(async (input: { q: string }) => {
+  const { q } = SearchInputSchema.parse(input);
+  const mode = routeStrategy(q);
+
+  return {
+    q,
+    mode,
+  };
+});
+```
+
+### Breaking it down
+
+1. **Regex Optimization:** Instead of asking an LLM "Does this need search?", which costs tokens and adds 1-2 seconds of latency, we run standard regex patterns! If the user says "latest news" or "price", we instantly know they need live data.
+2. **Recent Year Regex:** Notice `\b20(2[4-9]|3[0-9])\b`. This matches any year from 2024 to 2039. Since most model training cuts off before 2024, explicitly asking for a recent year guarantees they need web search!
+3. **RunnableLambda:** LCEL requires every step in the chain to be a "Runnable". By wrapping our standard async function in `RunnableLambda.from()`, we convert our vanilla typescript code into a fully integrated LangChain node! It validates the input via Zod, calculates the mode, and returns `{ q, mode }` to be piped into the next step of our chain!

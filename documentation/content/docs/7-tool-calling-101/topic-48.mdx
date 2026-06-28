@@ -1,0 +1,119 @@
+---
+title: 48. Web Pipeline Part 2
+description: Composing the final answer and exporting the RunnableSequence
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Build LCEL: Web Pipeline (Part 2)
+
+In the previous section, we fetched our web results and summarized them. Now it's time to actually answer the user's question!
+
+This final step is the **Compose Step**. It will take the summarized context, feed it into the LLM, and return our final `Candidate` object! But this step also has a secret super power... it can handle the Direct Path as a fallback!
+
+### The Implementation
+
+Append the following code to `agent/src/search_tool/web-pipeline.ts`:
+
+```typescript title="agent/src/search_tool/web-pipeline.ts"
+// ... (previous imports)
+import { Candidate } from "./types";
+import { getChatModel } from "../shared/models";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { RunnableSequence } from "@langchain/core/runnables";
+
+// STEP 3: The Compose Node
+export const composeStep = RunnableLambda.from(
+  async (ctx: {
+    q: string;
+    results: any[];
+    pageSummaries: any[];
+    fallback: "no-results" | "snippets" | "none";
+  }): Promise<Candidate> => {
+    const model = getChatModel({ temperature: 0.2 });
+
+    // BRANCH A: Direct Path (Fallback)
+    // If the web search failed to find anything, answer directly!
+    if (!ctx.pageSummaries || ctx.pageSummaries.length === 0) {
+      const directResponseFromModel = await model.invoke([
+        new SystemMessage(
+          [
+            "You answer briefly and clearly for beginners",
+            "If unsure, say so",
+          ].join("\n"),
+        ),
+        new HumanMessage(ctx.q),
+      ]);
+
+      const directAns = (
+        typeof directResponseFromModel.content === "string"
+          ? directResponseFromModel.content
+          : String(directResponseFromModel.content)
+      ).trim();
+
+      return {
+        answer: directAns,
+        sources: [],
+        mode: "direct",
+      };
+    }
+
+    // BRANCH B: Web Path (Success)
+    // Answer using the provided summaries!
+    const res = await model.invoke([
+      new SystemMessage(
+        [
+          "You concisely answer questions using provided page summaries",
+          "Rules",
+          "- Be accurate and neutral",
+          "- 5-8 sentences max",
+          "- Use only the provided summaries; do not invent new facts",
+        ].join("\n"),
+      ),
+      new HumanMessage(
+        [
+          `Question: ${ctx.q}`,
+          "summaries:",
+          JSON.stringify(ctx.pageSummaries, null, 2),
+        ].join("\n"),
+      ),
+    ]);
+
+    const finalAns =
+      typeof res.content === "string" ? res.content : String(res.content);
+
+    const extractSources = ctx.pageSummaries.map((x) => x.url);
+
+    return {
+      answer: finalAns,
+      sources: extractSources,
+      mode: "web",
+    };
+  },
+);
+
+// STEP 4: The LCEL Pipeline!
+export const webPath = RunnableSequence.from([
+  webSearchStep,
+  openAndSummarizeStep,
+  composeStep,
+]);
+```
+
+### Breaking it down
+
+#### 1. The Fallback Branch
+Look closely at the first `if` statement. If `pageSummaries` is empty, it means our search completely failed. Instead of returning an error to the user, we dynamically pivot to a **Direct Path**! We prompt the model to just try its best to answer from its own internal training data, and we return a `Candidate` object with `mode: "direct"`. 
+
+#### 2. The Context Injection
+If we *do* have summaries, we inject them into the `HumanMessage` using `JSON.stringify(ctx.pageSummaries, null, 2)`. Because we summarized them earlier, this massive JSON payload will easily fit inside the context window! We also explicitly instruct the model in the `SystemMessage` to **not invent new facts** and only use the provided summaries.
+
+#### 3. RunnableSequence
+Finally, we tie it all together! `RunnableSequence.from([...])` is the absolute core of LangChain Expression Language (LCEL). It takes an array of Runnables and pipes them together. 
+
+When you invoke `webPath`, data will flow like this:
+1. `webSearchStep` takes `{q, mode}` and fetches search results.
+2. `openAndSummarizeStep` takes the output of step 1, fetches the URLs, and creates summaries.
+3. `composeStep` takes the output of step 2, calls the LLM, and returns the final `Candidate` object.
+
+All of this complex logic is now bundled into a single, beautifully abstract `webPath` variable!

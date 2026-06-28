@@ -1,0 +1,129 @@
+---
+title: 50. Final Validation
+description: Self-healing JSON generation using a validation node
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Build LCEL: Final Validation
+
+Our pipeline has two paths: the `webPath` and the `directPath`. No matter which path is taken, both of them return a `Candidate` object.
+
+But before we confidently send this answer back to the frontend UI, we need to enforce our final **Zod Contract**. What if the LLM hallucinated a malformed URL? What if it hallucinated a totally broken data structure?
+
+To handle this, we introduce the **Final Validation Node**, which includes an incredibly powerful AI pattern: **Self-Healing LLM Output**!
+
+### The Implementation
+
+First, add the final schema to `agent/src/utils/schemas.ts`:
+
+```typescript title="agent/src/utils/schemas.ts"
+// ... (previous schemas)
+
+export const SearchAnswerSchema = z.object({
+  answer: z.string().min(1),
+  sources: z.array(z.url()).default([]),
+});
+
+export type SearchAnswer = z.infer<typeof SearchAnswerSchema>;
+```
+
+Next, create the validation logic at `agent/src/search_tool/final-validate.ts`:
+
+```typescript title="agent/src/search_tool/final-validate.ts"
+import { RunnableLambda } from "@langchain/core/runnables";
+import { Candidate } from "./types";
+import { SearchAnswerSchema } from "../utils/schemas";
+import { getChatModel } from "../shared/models";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+
+// STEP 1: The Validation Node
+export const finalValidateAndPolish = RunnableLambda.from(
+  async (candidate: Candidate) => {
+    const finalDraft = {
+      answer: candidate.answer,
+      sources: candidate.sources ?? [],
+    };
+
+    // Attempt 1: Does it pass the contract naturally?
+    const parsed1 = SearchAnswerSchema.safeParse(finalDraft);
+    if (parsed1.success) return parsed1.data;
+
+    // Attempt 2: If it failed, perform a One-Shot Repair!
+    const repaired = await repairSearchAns(finalDraft);
+    const parsed2 = SearchAnswerSchema.safeParse(repaired);
+
+    // If it succeeds this time, return the repaired data
+    if (parsed2.success) return parsed2.data;
+    
+    // If it fails twice, throw an error or handle gracefully (omitted for brevity)
+  },
+);
+
+// STEP 2: The Self-Healing Function
+async function repairSearchAns(
+  obj: any,
+): Promise<{ answer: string; sources: string[] }> {
+  const model = getChatModel({ temperature: 0.2 });
+
+  const response = await model.invoke([
+    new SystemMessage(
+      [
+        "You fix json objects to match a given schema",
+        "Respond only with valid json object",
+        "Schema: {answer: string; sources: string[] (urls as strings)}",
+      ].join("\n"),
+    ),
+    new HumanMessage(
+      [
+        "Make this exactly to the schema. Ensure sources is an array of URL strings",
+        "Input JSON:",
+        JSON.stringify(obj),
+      ].join("\n\n"),
+    ),
+  ]);
+
+  const text =
+    typeof response.content === "string"
+      ? response.content
+      : String(response.content);
+
+  const json = extractJson(text);
+
+  // Return the best-effort repaired JSON
+  return {
+    answer: String(json?.answer ?? "").trim(),
+    sources: Array.isArray(json?.sources) ? json?.sources?.map(String) : [],
+  };
+}
+
+// Helper function to extract JSON blocks from markdown fences
+function extractJson(input: string) {
+  const start = input.indexOf("{");
+  const end = input.lastIndexOf("}"); // Use lastIndexOf for safety
+  if (start === -1 || end === -1 || end <= start) return {};
+
+  try {
+    return JSON.parse(input.slice(start, end + 1));
+  } catch {
+    return {};
+  }
+}
+```
+
+### Breaking it down
+
+<Callout title="The Safe Parse Pattern" type="info">
+  Instead of using `SearchAnswerSchema.parse()` (which immediately crashes the app if validation fails), we use `SearchAnswerSchema.safeParse()`. This returns an object indicating `{ success: boolean }`, allowing us to gracefully handle the failure without breaking the user experience!
+</Callout>
+
+#### 1. Self-Healing Output (One-Shot Repair)
+If the initial `safeParse()` fails (for example, if the LLM hallucinated `sources: ["Not a real URL"]` instead of a valid HTTP link), the code doesn't just give up. 
+It enters `repairSearchAns()`, taking the *broken* JSON and feeding it **back into the LLM** with explicit instructions: *"You fix JSON objects. Here is the schema, here is the broken JSON. Fix it."* 
+
+This is called a **Self-Healing Loop**, and it dramatically improves the reliability of LLM pipelines!
+
+#### 2. JSON Extraction
+Since LLMs often wrap their outputs in markdown blocks (e.g. ` ```json { ... } ``` `) instead of returning raw JSON text, the `extractJson` helper brilliantly slices out everything outside of the first `{` and the last `}` before attempting to run `JSON.parse()`.
+
+With this final node in place, any object that makes it out of this pipeline is **100% guaranteed** to match the required UI data contract!

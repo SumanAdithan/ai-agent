@@ -1,0 +1,104 @@
+---
+title: 43. Open URL Logic
+description: Fetching and parsing raw web pages
+---
+
+import { Callout } from 'fumadocs-ui/components/callout';
+
+# Open URL Logic
+
+Our AI agent now has the ability to search the web using Tavily. But what happens when the LLM decides it needs to dive deeper into one of those search results to read the full article?
+
+An LLM is just a statistical text engine; it cannot physically open a browser or fetch a URL. Therefore, we have to build a tool that acts as a secure, optimized browser on its behalf!
+
+### The Implementation
+
+Before writing this code, ensure you have installed the `html-to-text` parser in your `agent` directory:
+
+```bash
+pnpm add html-to-text
+pnpm add -D @types/html-to-text
+```
+
+Next, let's create a new file at `agent/src/utils/openUrl.ts`:
+
+```typescript title="agent/src/utils/openUrl.ts"
+import { convert } from "html-to-text";
+import { OpenUrlOutputSchema } from "./schemas";
+
+export async function openUrl(url: string) {
+  // Step 1: Validate the protocol
+  const normalizedUrl = validateUrl(url);
+
+  // Step 2: Fetch the page ourselves as a "browser"
+  const res = await fetch(normalizedUrl, {
+    headers: {
+      "User-Agent": "agent-core/1.0 (+course-demo)",
+    },
+  });
+
+  if (!res.ok) {
+    const body = await safeText(res);
+    throw new Error(`OpenURL failed ${res.status} - ${body.slice(0, 200)}`);
+  }
+
+  // Step 3: Read the raw text
+  const contentType = res.headers.get("content-type") ?? "";
+  const raw = await res.text();
+
+  // Step 4: Convert bloated HTML into clean, readable text!
+  const text = contentType.includes("text/html")
+    ? convert(raw, {
+      wordwrap: false,
+      selectors: [
+        { selector: "nav", format: "skip" },
+        { selector: "header", format: "skip" },
+        { selector: "footer", format: "skip" },
+        { selector: "script", format: "skip" },
+        { selector: "style", format: "skip" },
+      ],
+    })
+    : raw;
+
+  // Step 5: Aggressively optimize tokens
+  const cleaned = collapseWhitespace(text);
+  const capped = cleaned.slice(0, 8000);
+
+  // Step 6: Validate against our Zod schema!
+  return OpenUrlOutputSchema.parse({ url: normalizedUrl, content: capped });
+}
+
+function validateUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (!/^https?:$/.test(parsed.protocol)) {
+      throw new Error("only http/https are supported");
+    }
+    return parsed.toString();
+  } catch {
+    throw new Error("Invalid Url");
+  }
+}
+
+async function safeText(res: Response) {
+  try {
+    return await res.json();
+  } catch {
+    return "<no body>";
+  }
+}
+
+function collapseWhitespace(s: String) {
+  return s.replace(/\s+/g, " ").trim();
+}
+```
+
+### Breaking it down
+
+This function is a masterclass in token optimization and safety!
+
+1. **Safety First:** Before we ever run `fetch()`, we pass the URL through `validateUrl()` to absolutely guarantee the AI didn't hallucinate a local file path (like `file:///etc/password`). We strictly enforce HTTP/HTTPS.
+2. **Spoofing the User-Agent:** Some websites immediately block generic Node.js `fetch` requests with a `403 Forbidden` error. We provide a custom `User-Agent` string to prevent instant rejections.
+3. **HTML Parsing:** HTML is completely bloated with tags that waste our LLM's context window. We use the `html-to-text` library to strip out the DOM, explicitly skipping `nav`, `header`, `footer`, `script`, and `style` tags, leaving only the pure article text!
+4. **Token Capping:** Even after stripping HTML, a long article might be 50,000 characters. We aggressively slice the content to 8000 characters to protect our wallet and prevent the context window from crashing!
+5. **Zod Validation:** As always, the final output is forced through our Zod `OpenUrlOutputSchema` to guarantee cross-stack type safety.

@@ -1,0 +1,82 @@
+---
+title: 42. Web Search with Tavily
+description: Implementing our custom search tool wrapper
+---
+
+# Web Search with Tavily
+
+Now that our `WebSearchResultsSchema` contract is defined, it is time to actually connect to the live internet using **Tavily**. 
+
+Tavily is a search engine built specifically for AI agents, returning clean data instead of bloated HTML! 
+
+### The Code
+
+First, make sure you install the Tavily SDK in your `agent` directory:
+
+```bash
+pnpm add @tavily/core
+```
+
+Next, create a new file at `agent/src/utils/websearch.ts` and add the following wrapper function:
+
+```typescript title="agent/src/utils/websearch.ts"
+import { tavily } from "@tavily/core";
+import { env } from "../shared/env";
+import { WebSearchResultSchema, WebSearchResultsSchema } from "./schemas";
+
+export async function webSearch(q: string) {
+  const query = (q ?? "").trim();
+  if (!query) return [];
+
+  return await searchTavilyUtil(query);
+}
+
+async function searchTavilyUtil(query: string) {
+  if (!env.TAVILY_API_KEY) {
+    throw new Error("TAVILY_API_KEY is missing");
+  }
+
+  // 1. Initialize the Tavily client
+  const tvly = tavily({ apiKey: env.TAVILY_API_KEY });
+
+  try {
+    // 2. Perform a basic search, capping results at 5
+    const response = await tvly.search(query, {
+      searchDepth: "basic",
+      maxResults: 5,
+      includeAnswer: false,
+      includeImages: false,
+    });
+
+    const results = Array.isArray(response.results) ? response.results : [];
+
+    // 3. Normalize and validate each individual result against our Zod Schema
+    const normalized = results.slice(0, 5).map((r: any) =>
+      WebSearchResultSchema.parse({
+        title: String(r?.title ?? "").trim() || "Untitled",
+        url: String(r?.url ?? "").trim(),
+        snippet: String(r?.content ?? "")
+          .trim()
+          .slice(0, 220), // Truncate the snippet to save context tokens!
+      }),
+    );
+
+    // 4. Validate the final array shape and return it
+    return WebSearchResultsSchema.parse(normalized);
+  } catch (err) {
+    if (err instanceof Error) {
+      console.error("Search failed:", err.message);
+      throw new Error(`Tavily search failed: ${err.message}`);
+    } else {
+      throw new Error("An unknown error occurred during Tavily search");
+    }
+  }
+}
+```
+
+### Breaking it down
+
+1. **Initialization:** We initialize the Tavily client using our validated `TAVILY_API_KEY` from our `env` schema.
+2. **Search Parameters:** We set `searchDepth: "basic"` and `maxResults: 5` to keep the API call blazing fast and token-efficient. We also disable answers and images since we just want raw source snippets for our LLM to read.
+3. **Data Normalization:** Search APIs can be flaky. Before we ever hand this data to the LLM, we map over the response and force it through `WebSearchResultSchema.parse()`. Notice how we explicitly truncate the `snippet` to 220 characters! This is a massive token-saving optimization to prevent flooding our context window.
+4. **Final Contract:** We wrap the entire array in `WebSearchResultsSchema.parse()` as a final line of defense to guarantee we are fulfilling our cross-stack data contract!

@@ -1,0 +1,82 @@
+---
+title: 40. Implementing Chat Models
+description: Setting up LangChain and our Provider SDKs
+---
+
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+# Implementing Chat Models
+
+Now that our environment variables are perfectly typed and validated, it's time to install LangChain and our model providers!
+
+Because LangChain provides a unified abstraction layer, we can install SDKs for OpenAI, Gemini, and Groq, and seamlessly switch between them using a single factory function.
+
+<Steps>
+
+<Step>
+### 1. Install the Dependencies
+
+In your terminal, make sure you are inside the `agent` directory and install the core LangChain package along with the specific SDKs for the three providers we want to support:
+
+```bash
+pnpm add @langchain/core @langchain/google @langchain/groq @langchain/openai
+```
+</Step>
+
+<Step>
+### 2. Create the Model Factory
+
+Create a new file at `agent/src/shared/models.ts` and add the following code:
+
+```typescript title="agent/src/shared/models.ts"
+import { env } from "./env";
+import { ChatOpenAI } from "@langchain/openai";
+import { ChatGoogle } from "@langchain/google";
+import { ChatGroq } from "@langchain/groq";
+import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+
+type ModelOpts = {
+  temperature?: number;
+  maxTokens?: number;
+};
+
+export function getChatModel(opts: ModelOpts = {}): BaseChatModel {
+  // We default to a low temperature (0.2) for crisp, deterministic outputs!
+  const temp = opts.temperature ?? 0.2;
+
+  switch (env.MODEL_PROVIDER) {
+    case "gemini":
+      return new ChatGoogle({
+        apiKey: env.GOOGLE_API_KEY,
+        model: env.GEMINI_MODEL,
+        temperature: temp,
+      });
+
+    case "groq":
+      return new ChatGroq({
+        apiKey: env.GROQ_API_KEY,
+        model: env.GROQ_MODEL,
+        temperature: temp,
+      });
+
+    case "openai":
+    default:
+      return new ChatOpenAI({
+        apiKey: env.OPENAI_API_KEY,
+        model: env.OPENAI_MODEL,
+        temperature: temp,
+      });
+  }
+}
+```
+</Step>
+
+</Steps>
+
+### Why a Factory Function?
+
+By creating this `getChatModel` factory function, the rest of our application **never needs to know which AI model is currently active**. 
+
+If we want to switch our entire agent from Gemini to OpenAI, we don't have to rewrite any tool calling logic, update any prompts, or modify any routes. We just change `MODEL_PROVIDER=openai` in our `.env` file, and LangChain handles the rest! 
+
+Notice how the function explicitly returns a `BaseChatModel`. Because all three SDKs implement this exact same base class, they all expose the exact same methods (like `.pipe()`, `.invoke()`, and `.withStructuredOutput()`).

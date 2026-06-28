@@ -276,4 +276,22 @@ Section 6: LangChain fundamentals
             - it is used to connect those runnables together
             - .pipe, .invoke
 
-Section 7:
+Section 7: Tool-Calling 101: Search v1 (LCEL):
+    36. Project overview
+    37. Project flow and introduction to tavily
+    38. Starter code for backend and frontend
+    39. Setting up env schema
+    40. install langchain js, provider sdks and implementing chat models
+    41. Web search schema
+    42. Web search with Tavily implementation
+    43. Openurl logic implementation
+    44. Summarize logic with langchain system and human message
+    45. Build LCEL: create types
+    46. Build LCEL: implement route strategy
+    47. Build LCEL: implement web pipeline - part 1
+    48. Build LCEL: implement direct pipeline - part 2
+    49. Build LCEL: implement direct pipeline
+    50. BUILD LCEL: final validation logic
+    51. BUILD LCEL: implement search chain
+    52. Add a search route and setup express server
+    53. Integrate search agent with next js

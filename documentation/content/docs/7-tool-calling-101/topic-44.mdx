@@ -1,0 +1,87 @@
+---
+title: 44. Summarize Logic
+description: Using System and Human Messages for AI summaries
+---
+
+# Summarize Logic
+
+We've built tools to search the internet and open raw webpages. But as we learned earlier, we can't just blindly dump a 50,000 character web article into our LLM's context window.
+
+Before feeding search results back to our core AI agent, it is a best practice to **summarize** long documents first. This ensures our core agent remains incredibly fast, cheap, and focused on the user's actual question!
+
+### The Implementation
+
+Create a new file at `agent/src/utils/summarize.ts`:
+
+```typescript title="agent/src/utils/summarize.ts"
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { getChatModel } from "../shared/models";
+import { SummarizeInputSchema, SummarizeOutputSchema } from "./schemas";
+
+export async function summarize(text: string) {
+  // 1. Validate the input (must be at least 50 characters!)
+  const { text: raw } = SummarizeInputSchema.parse({ text });
+
+  // 2. Hard cap the raw text at 4000 characters
+  const clipped = clip(raw, 4000);
+
+  // 3. Initialize our LLM with a low temperature for stability
+  const model = getChatModel({ temperature: 0.2 });
+
+  // 4. Ask the model to summarize using strict roles
+  const res = await model.invoke([
+    new SystemMessage(
+      [
+        "You are a helpful assistant that writes short, accurate summaries.",
+        "Guidelines:",
+        "- Be factual and neutral, avoid marketing language.",
+        "- 5-8 sentences; no lists unless absolutely necessary.",
+        "- Do Not invent sources; you only summarize the provided text.",
+        "- Keep it readable for beginners",
+      ].join("\n"),
+    ),
+
+    new HumanMessage(
+      [
+        "Summarize the following content for a beginner friendly audience.",
+        "Focus on key facts and remove fluff",
+        "TEXT:",
+        clipped,
+      ].join("\n\n"),
+    ),
+  ]);
+
+  // 5. Extract the string response
+  const rawModelOutput =
+    typeof res.content === "string" ? res.content : String(res.content);
+
+  // 6. Clean up white spaces
+  const summary = normalizeSummary(rawModelOutput);
+
+  // 7. Validate the final output!
+  return SummarizeOutputSchema.parse({ summary });
+}
+
+function clip(s: string, max: number) {
+  return s.length > max ? s.slice(0, max) : s;
+}
+
+function normalizeSummary(s: string) {
+  const t = s
+    .replace(/\s+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+
+  return t.slice(0, 2500);
+}
+```
+
+### Breaking it down
+
+1. **Input Validation:** Notice how we validate the input string *first*? `SummarizeInputSchema` throws an error if the provided text is less than 50 characters, preventing us from wasting an API call on text that doesn't actually need summarizing!
+2. **System vs Human Messages:** 
+   * The **SystemMessage** is the overarching "role" and absolute guidelines the LLM must adhere to (e.g., "Do Not invent sources").
+   * The **HumanMessage** is the specific task at hand (e.g., "Summarize this specific block of text").
+   By separating these using LangChain's built-in message classes, models perform *significantly* better at following strict instructions!
+3. **Double Clipping:** We `clip(raw, 4000)` *before* sending it to the LLM to save tokens, and we `slice(0, 2500)` the final result *after* the LLM responds to guarantee the summary never balloons out of control!
+4. **Zod Parsing:** Just like every other tool, we force the final output through `SummarizeOutputSchema` to guarantee cross-stack safety!

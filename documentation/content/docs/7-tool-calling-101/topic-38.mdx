@@ -1,0 +1,75 @@
+---
+title: 38. Starter Code
+description: Setting up the Next.js Client and Express Agent
+---
+
+import { Files, Folder, File } from 'fumadocs-ui/components/files';
+import { Step, Steps } from 'fumadocs-ui/components/steps';
+
+# Setting up the Project
+
+Just like our previous structured output project, we are adopting a full-stack architecture separated into two distinct parts: an **Express.js Node backend** (which we will call our `agent`) and a **Next.js frontend client**.
+
+<Steps>
+
+<Step>
+### 1. The Express Agent
+First, we set up a minimal Node.js environment powered by Express and TypeScript to handle our orchestration logic.
+
+Create an `agent` folder and initialize the project:
+```bash
+mkdir agent && cd agent
+pnpm init
+```
+
+Install the required HTTP server, environment dependencies, and Zod for our schemas:
+```bash
+pnpm add express cors dotenv zod
+pnpm add -D typescript @types/node tsx @types/express @types/cors
+```
+</Step>
+
+<Step>
+### 2. The Next.js Client
+Next, we scaffold a modern React application for our frontend using Next.js (App Router).
+
+In your main project folder, run the Next.js creation script:
+```bash
+pnpm create next-app@latest client
+```
+
+*(During setup, ensure you select TypeScript, Tailwind CSS, and the App Router.)*
+
+Finally, we initialize Shadcn UI to give us access to beautifully designed, accessible components:
+```bash
+cd client
+pnpm dlx shadcn@latest init
+```
+</Step>
+
+<Step>
+### 3. Project Structure
+Once both the agent and client are initialized, your project structure should look like this:
+
+<Files>
+  <Folder name="search_tool_langchain" defaultOpen>
+    <Folder name="agent">
+      <File name="package.json" />
+      <File name="tsconfig.json" />
+    </Folder>
+    <Folder name="client">
+      <Folder name="src">
+        <Folder name="app" />
+        <Folder name="components" />
+        <Folder name="lib" />
+      </Folder>
+      <File name="package.json" />
+      <File name="components.json" />
+    </Folder>
+  </Folder>
+</Files>
+</Step>
+
+</Steps>
+
+Now that our boilerplate is ready, we can begin implementing our search agent in the backend!

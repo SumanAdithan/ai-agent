@@ -1,0 +1,37 @@
+---
+title: 45. Build LCEL Types
+description: Defining the shape of our LangChain Pipeline
+---
+
+# Build LCEL: Types
+
+We are finally ready to start building our core **LangChain Expression Language (LCEL)** pipeline! 
+
+As discussed previously, our agent needs to be smart enough to route user queries. Sometimes it needs to search the web (the **web path**), and sometimes it can just answer directly from its own knowledge (the **direct path**).
+
+Regardless of which path the agent takes, the final output to the user needs to look exactly the same!
+
+### The Implementation
+
+Create a new folder called `search_tool` inside `agent/src/`, then create a `types.ts` file inside it:
+
+```typescript title="agent/src/search_tool/types.ts"
+// Our agent has 2 possible paths:
+// 1. web path -> browse, summarize, cite source urls
+// 2. direct path -> LLM answers directly, no browsing
+// Both paths must return this shared shape!
+
+export type Candidate = {
+  answer: string;
+  sources: string[];
+  mode: "web" | "direct";
+};
+```
+
+### Breaking it down
+
+1. **`answer`**: The final string response that will be displayed to the user.
+2. **`sources`**: An array of URLs. If the agent took the `direct` path, this will just be an empty array! But if it took the `web` path, this will contain the URLs of the articles it read.
+3. **`mode`**: A strict string literal (`"web"` or `"direct"`). This is incredibly helpful for debugging on the frontend, allowing us to show the user exactly how the AI arrived at its conclusion!
+
+By defining this `Candidate` type up front, we ensure that as we build out our complex LCEL branches in the upcoming lessons, we have a strict TypeScript contract guaranteeing that both branches converge perfectly at the end!
